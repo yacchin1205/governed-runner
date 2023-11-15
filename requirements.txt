@@ -1,0 +1,5 @@
+fastapi
+uvicorn[standard]
+fastapi-pagination
+python-multipart
+toml
