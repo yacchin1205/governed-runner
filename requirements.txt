@@ -1,4 +1,9 @@
 fastapi
+starlette
+authlib
+httpx
+aiohttp-session
+itsdangerous
 uvicorn[standard]
 fastapi-pagination
 python-multipart
