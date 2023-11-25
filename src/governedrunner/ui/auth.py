@@ -50,7 +50,9 @@ async def is_logged_in(request):
         user_info = await client.get(USER_PROFILE_URL, headers=headers)
         logger.debug(f'Userinfo Response: {user_info}')
         if not user_info.is_success:
-            raise HTTPException(status_code=500, detail='Failed to retrieve user information')
+            logger.error('Failed to retrieve user information, token revoked')
+            del request.session['token']
+            return False
         logger.debug(f'Userinfo Content: {user_info.json()}')
         request.session['username'] = user_info.json()[USER_PROFILE_PROPNAME]
     return True

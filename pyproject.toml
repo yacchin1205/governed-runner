@@ -18,6 +18,9 @@ classifiers = [
 ]
 dynamic = ["dependencies"]
 
+[tool.setuptools.package-data]
+"governedrunner.frontend" = ["*.*"]
+
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 
