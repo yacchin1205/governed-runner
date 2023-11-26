@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 import time
 
@@ -73,7 +74,14 @@ async def get_user(request, db):
     username = await get_username(request)
     if username is None:
         return None
-    return db.query(User).filter(User.name == username).first()
+    r = db.query(User).filter(User.name == username).first()
+    if r is not None:
+        return r
+    u = User(name=username, created_at=datetime.now())
+    db.add(u)
+    db.commit()
+    db.refresh(u)
+    return u
 
 async def login(request):
     redirect_uri = request.url_for('auth')
