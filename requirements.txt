@@ -6,5 +6,6 @@ aiohttp-session
 itsdangerous
 uvicorn[standard]
 fastapi-pagination
+pydantic-settings
 python-multipart
 toml

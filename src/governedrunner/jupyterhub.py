@@ -44,6 +44,7 @@ def tljh_extra_hub_pip_packages():
         'aiohttp-session',
         'itsdangerous',
         'uvicorn[standard]',
+        'pydantic-settings',
         'python-multipart',
         'toml',
     ]

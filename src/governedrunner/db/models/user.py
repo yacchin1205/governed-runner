@@ -11,16 +11,19 @@ class User(Base):
     name = Column(String, unique=True, index=True)
     created_at = Column(DateTime, index=True)
 
-    rdm_tokens = relationship('RDMToken', back_populates='owner')
-
+    rdm_token = relationship(
+        'RDMToken',
+        back_populates='owner',
+        uselist=False,
+    )
 
 class RDMToken(Base):
     __tablename__ = 'rdm_tokens'
     id = Column(Integer, primary_key=True, index=True)
-    service_url = Column(String, index=True)
+    service_id = Column(String, index=True)
     token = Column(String, index=True)
     created_at = Column(DateTime, index=True)
     expired_at = Column(DateTime, nullable=True, index=True)
     owner_id = Column(Integer, ForeignKey('users.id'))
 
-    owner = relationship('User', back_populates='rdm_tokens')
+    owner = relationship('User', back_populates='rdm_token')

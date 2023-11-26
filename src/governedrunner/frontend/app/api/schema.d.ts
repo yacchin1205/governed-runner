@@ -13,18 +13,65 @@ export interface paths {
     get: operations["retrieve_server__get"];
   };
   "/users/me": {
-    /** Retrieve Current User */
+    /**
+     * Retrieve Current User
+     * @description 指定された認証情報に対応するユーザーを取得します。
+     */
     get: operations["retrieve_current_user_users_me_get"];
   };
   "/jobs/": {
-    /** Retrieve Jobs */
+    /**
+     * Retrieve Jobs
+     * @description 現在のユーザーが実行した全てのジョブを取得します。
+     */
     get: operations["retrieve_jobs_jobs__get"];
-    /** Create Job */
+    /**
+     * Create Job
+     * @description ジョブを実行します。
+     */
     post: operations["create_job_jobs__post"];
   };
   "/jobs/{job_id}": {
-    /** Retrieve Job */
+    /**
+     * Retrieve Job
+     * @description 指定されたジョブ情報を取得します。
+     */
     get: operations["retrieve_job_jobs__job_id__get"];
+  };
+  "/nodes/": {
+    /**
+     * Retrieve Nodes
+     * @description 現在のユーザーが参照可能なGakuNin RDMノードを取得します。
+     */
+    get: operations["retrieve_nodes_nodes__get"];
+  };
+  "/nodes/{node_id}/providers/": {
+    /**
+     * Retrieve Node Providers
+     * @description 指定されたGakuNin RDMノードに紐づくストレージプロバイダを取得します。
+     */
+    get: operations["retrieve_node_providers_nodes__node_id__providers__get"];
+  };
+  "/nodes/{node_id}/children/": {
+    /**
+     * Retrieve Node Children
+     * @description 指定されたGakuNin RDMノードの子ノードを取得します。
+     */
+    get: operations["retrieve_node_children_nodes__node_id__children__get"];
+  };
+  "/nodes/{node_id}/providers/{provider_id}/": {
+    /**
+     * Retrieve Node Root Files
+     * @description 指定されたストレージプロバイダのルートディレクトリにあるファイルを取得します。
+     */
+    get: operations["retrieve_node_root_files_nodes__node_id__providers__provider_id___get"];
+  };
+  "/nodes/{node_id}/providers/{provider_id}/{filepath}": {
+    /**
+     * Retrieve Node Files
+     * @description 指定されたストレージプロバイダのパスにあるファイルを取得します。
+     */
+    get: operations["retrieve_node_files_nodes__node_id__providers__provider_id___filepath__get"];
   };
 }
 
@@ -43,6 +90,49 @@ export interface components {
        * @default false
        */
       use_snapshot?: boolean;
+    };
+    /** FileOut */
+    FileOut: {
+      /**
+       * Id
+       * @example xxxxx
+       */
+      id: string;
+      /**
+       * Type
+       * @example nodes
+       */
+      type: string;
+      /**
+       * Links
+       * @example [
+       *   {
+       *     "href": "http://localhost:8000/nodes/xxxxx/",
+       *     "rel": "children"
+       *   }
+       * ]
+       */
+      links: {
+          [key: string]: string;
+        }[];
+      /** Data */
+      data: unknown;
+      kind: components["schemas"]["Kind"];
+      /**
+       * Name
+       * @example file.txt
+       */
+      name: string;
+      /**
+       * Provider
+       * @example osfstorage
+       */
+      provider: string;
+      /**
+       * Path
+       * @example /path/to/file.txt
+       */
+      path: string;
     };
     /**
      * FileType
@@ -71,12 +161,88 @@ export interface components {
       result: components["schemas"]["ResultOut"] | null;
       progress: components["schemas"]["ProgressOut"] | null;
     };
+    /**
+     * Kind
+     * @enum {string}
+     */
+    Kind: "file" | "folder";
+    /** NodeOut */
+    NodeOut: {
+      /**
+       * Id
+       * @example xxxxx
+       */
+      id: string;
+      /**
+       * Type
+       * @example nodes
+       */
+      type: string;
+      /**
+       * Links
+       * @example [
+       *   {
+       *     "href": "http://localhost:8000/nodes/xxxxx/",
+       *     "rel": "children"
+       *   }
+       * ]
+       */
+      links: {
+          [key: string]: string;
+        }[];
+      /** Data */
+      data: unknown;
+      /**
+       * Title
+       * @example GakuNin RDM Project
+       */
+      title: string;
+    };
+    /** Page[FileOut] */
+    Page_FileOut_: {
+      /** Items */
+      items: components["schemas"]["FileOut"][];
+      /** Total */
+      total: number;
+      /** Page */
+      page: number | null;
+      /** Size */
+      size: number | null;
+      /** Pages */
+      pages?: number | null;
+    };
     /** Page[JobOut] */
     Page_JobOut_: {
       /** Items */
       items: components["schemas"]["JobOut"][];
       /** Total */
-      total: number | null;
+      total: number;
+      /** Page */
+      page: number | null;
+      /** Size */
+      size: number | null;
+      /** Pages */
+      pages?: number | null;
+    };
+    /** Page[NodeOut] */
+    Page_NodeOut_: {
+      /** Items */
+      items: components["schemas"]["NodeOut"][];
+      /** Total */
+      total: number;
+      /** Page */
+      page: number | null;
+      /** Size */
+      size: number | null;
+      /** Pages */
+      pages?: number | null;
+    };
+    /** Page[ProviderOut] */
+    Page_ProviderOut_: {
+      /** Items */
+      items: components["schemas"]["ProviderOut"][];
+      /** Total */
+      total: number;
       /** Page */
       page: number | null;
       /** Size */
@@ -88,6 +254,38 @@ export interface components {
     ProgressOut: {
       /** Url */
       url: string | null;
+    };
+    /** ProviderOut */
+    ProviderOut: {
+      /**
+       * Id
+       * @example xxxxx
+       */
+      id: string;
+      /**
+       * Type
+       * @example nodes
+       */
+      type: string;
+      /**
+       * Links
+       * @example [
+       *   {
+       *     "href": "http://localhost:8000/nodes/xxxxx/",
+       *     "rel": "children"
+       *   }
+       * ]
+       */
+      links: {
+          [key: string]: string;
+        }[];
+      /** Data */
+      data: unknown;
+      /**
+       * Name
+       * @example osfstorage
+       */
+      name: string;
     };
     /** ResultOut */
     ResultOut: {
@@ -164,7 +362,10 @@ export interface operations {
       };
     };
   };
-  /** Retrieve Current User */
+  /**
+   * Retrieve Current User
+   * @description 指定された認証情報に対応するユーザーを取得します。
+   */
   retrieve_current_user_users_me_get: {
     responses: {
       /** @description Successful Response */
@@ -175,7 +376,10 @@ export interface operations {
       };
     };
   };
-  /** Retrieve Jobs */
+  /**
+   * Retrieve Jobs
+   * @description 現在のユーザーが実行した全てのジョブを取得します。
+   */
   retrieve_jobs_jobs__get: {
     parameters: {
       query?: {
@@ -201,7 +405,10 @@ export interface operations {
       };
     };
   };
-  /** Create Job */
+  /**
+   * Create Job
+   * @description ジョブを実行します。
+   */
   create_job_jobs__post: {
     requestBody: {
       content: {
@@ -223,7 +430,10 @@ export interface operations {
       };
     };
   };
-  /** Retrieve Job */
+  /**
+   * Retrieve Job
+   * @description 指定されたジョブ情報を取得します。
+   */
   retrieve_job_jobs__job_id__get: {
     parameters: {
       path: {
@@ -235,6 +445,161 @@ export interface operations {
       200: {
         content: {
           "application/json": components["schemas"]["JobOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retrieve Nodes
+   * @description 現在のユーザーが参照可能なGakuNin RDMノードを取得します。
+   */
+  retrieve_nodes_nodes__get: {
+    parameters: {
+      query?: {
+        /** @description Page number */
+        page?: number;
+        /** @description Page size */
+        size?: number;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Page_NodeOut_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retrieve Node Providers
+   * @description 指定されたGakuNin RDMノードに紐づくストレージプロバイダを取得します。
+   */
+  retrieve_node_providers_nodes__node_id__providers__get: {
+    parameters: {
+      query?: {
+        /** @description Page number */
+        page?: number;
+        /** @description Page size */
+        size?: number;
+      };
+      path: {
+        node_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Page_ProviderOut_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retrieve Node Children
+   * @description 指定されたGakuNin RDMノードの子ノードを取得します。
+   */
+  retrieve_node_children_nodes__node_id__children__get: {
+    parameters: {
+      query?: {
+        /** @description Page number */
+        page?: number;
+        /** @description Page size */
+        size?: number;
+      };
+      path: {
+        node_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Page_NodeOut_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retrieve Node Root Files
+   * @description 指定されたストレージプロバイダのルートディレクトリにあるファイルを取得します。
+   */
+  retrieve_node_root_files_nodes__node_id__providers__provider_id___get: {
+    parameters: {
+      query?: {
+        /** @description Page number */
+        page?: number;
+        /** @description Page size */
+        size?: number;
+      };
+      path: {
+        node_id: string;
+        provider_id: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Page_FileOut_"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  /**
+   * Retrieve Node Files
+   * @description 指定されたストレージプロバイダのパスにあるファイルを取得します。
+   */
+  retrieve_node_files_nodes__node_id__providers__provider_id___filepath__get: {
+    parameters: {
+      query?: {
+        /** @description Page number */
+        page?: number;
+        /** @description Page size */
+        size?: number;
+      };
+      path: {
+        node_id: string;
+        provider_id: string;
+        filepath: string;
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        content: {
+          "application/json": components["schemas"]["Page_FileOut_"];
         };
       };
       /** @description Validation Error */

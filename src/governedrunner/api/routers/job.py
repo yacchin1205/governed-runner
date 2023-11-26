@@ -39,6 +39,9 @@ def retrieve_jobs(
     state: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
+    '''
+    現在のユーザーが実行した全てのジョブを取得します。
+    '''
     return paginate(db, select(Job) \
         .where(Job.owner == current_user) \
         .order_by(Job.created_at))
@@ -55,6 +58,9 @@ def create_job(
     use_snapshot: bool = Form(False),
     db: Session = Depends(get_db),
 ):
+    '''
+    ジョブを実行します。
+    '''
     job_id = str(uuid.uuid4())
     job = Job(id=job_id, created_at=datetime.now(), owner=current_user)
     db.add(job)
@@ -71,6 +77,9 @@ def retrieve_job(
     job_id: str,
     db: Session = Depends(get_db),
 ):
+    '''
+    指定されたジョブ情報を取得します。
+    '''
     job = db.query(Job).filter(Job.id == job_id and Job.owner == current_user).first()
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -79,6 +88,9 @@ def retrieve_job(
 
 @router.websocket('/jobs/{job_id}/progress')
 async def stream_job_progress(job_id: str, websocket: WebSocket):
+    '''
+    ジョブの進行状況を取得します。
+    '''
     # TBD
     await websocket.accept()
     await websocket.send_json({'test': True})

@@ -7,11 +7,14 @@ from starlette.config import Config
 from starlette.exceptions import HTTPException
 
 from authlib.integrations.starlette_client import OAuth
+from governedrunner.api.demo import USERNAME as DEMO_USERNAME
+from governedrunner.db.models import User
 
 logger = logging.getLogger(__name__)
 
 config = Config('.env')
 oauth = OAuth(config)
+DEMO_USER = config('DEMO_USER', cast=bool, default=False)
 CLIENT_ID = config('OAUTH2_CLIENT_ID', cast=str, default='')
 CLIENT_SECRET = config('OAUTH2_CLIENT_SECRET', cast=str, default='')
 ACCESS_TOKEN_URL = config('OAUTH2_TOKEN_URL', cast=str, default='')
@@ -32,6 +35,8 @@ service = oauth.register(
 )
 
 async def is_logged_in(request):
+    if DEMO_USER:
+        return True
     if 'token' not in request.session:
         return False
     token = request.session['token']
@@ -58,9 +63,17 @@ async def is_logged_in(request):
     return True
 
 async def get_username(request):
+    if DEMO_USER:
+        return DEMO_USERNAME
     if await is_logged_in(request):
         return request.session['username']
     return None
+
+async def get_user(request, db):
+    username = await get_username(request)
+    if username is None:
+        return None
+    return db.query(User).filter(User.name == username).first()
 
 async def login(request):
     redirect_uri = request.url_for('auth')
