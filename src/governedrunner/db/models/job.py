@@ -8,7 +8,8 @@ class Job(Base):
     __tablename__ = 'jobs'
 
     id = Column(String, primary_key=True, index=True)
-    created_at = Column(DateTime, index=True)
+    created_at = Column(DateTime(timezone=True), index=True)
+    updated_at = Column(DateTime(timezone=True), index=True)
     owner_id = Column(Integer, ForeignKey('users.id'))
     status = Column(String, nullable=True, index=True)
     source_url = Column(String, nullable=True, index=True)

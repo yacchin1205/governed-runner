@@ -25,6 +25,7 @@ class ProgressOut(BaseModel):
 class JobOut(BaseModel):
     id: str = Field(example='JOB_ID')
     created_at: datetime
+    updated_at: datetime
     status: Optional[State]
     source: Optional[SourceOut]
     result: Optional[ResultOut]

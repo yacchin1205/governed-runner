@@ -1,5 +1,4 @@
-from datetime import datetime
-from typing import Annotated
+from datetime import datetime, timezone
 
 from fastapi import Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -25,7 +24,11 @@ def get_current_user(db: Session = Depends(get_db), username: str = Depends(get_
     u = db.query(User).filter(User.name == username).first()
     if u is not None:
         return u
-    u = User(name=username, created_at=datetime.now())
+    u = User(
+        name=username,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
     db.add(u)
     db.commit()
     db.refresh(u)

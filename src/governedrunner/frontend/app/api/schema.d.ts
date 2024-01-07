@@ -91,6 +91,50 @@ export interface components {
        */
       use_snapshot?: boolean;
     };
+    /** CustomizedPage[FileOut] */
+    CustomizedPage_FileOut_: {
+      /** Items */
+      items: components["schemas"]["FileOut"][];
+      /** Total */
+      total: number;
+      /** Page */
+      page: number | null;
+      /** Size */
+      size: number | null;
+      /** Pages */
+      pages?: number | null;
+    };
+    /** CustomizedPage[NodeOut] */
+    CustomizedPage_NodeOut_: {
+      /** Items */
+      items: components["schemas"]["NodeOut"][];
+      /** Total */
+      total: number;
+      /** Page */
+      page: number | null;
+      /** Size */
+      size: number | null;
+      /** Pages */
+      pages?: number | null;
+    };
+    /** CustomizedPage[ProviderOut] */
+    CustomizedPage_ProviderOut_: {
+      /** Items */
+      items: components["schemas"]["ProviderOut"][];
+      /** Total */
+      total: number;
+      /** Page */
+      page: number | null;
+      /** Size */
+      size: number | null;
+      /** Pages */
+      pages?: number | null;
+    };
+    /**
+     * FileAction
+     * @enum {string}
+     */
+    FileAction: "download" | "meta";
     /** FileOut */
     FileOut: {
       /**
@@ -124,6 +168,11 @@ export interface components {
        */
       name: string;
       /**
+       * Node
+       * @example xxxxx
+       */
+      node: string;
+      /**
        * Provider
        * @example osfstorage
        */
@@ -133,6 +182,16 @@ export interface components {
        * @example /path/to/file.txt
        */
       path: string;
+      /**
+       * Created At
+       * @example 2021-01-01T00:00:00.000000+00:00
+       */
+      created_at: string | null;
+      /**
+       * Updated At
+       * @example 2021-01-01T00:00:00.000000+00:00
+       */
+      updated_at: string | null;
     };
     /**
      * FileType
@@ -156,6 +215,11 @@ export interface components {
        * Format: date-time
        */
       created_at: string;
+      /**
+       * Updated At
+       * Format: date-time
+       */
+      updated_at: string;
       status: components["schemas"]["State"] | null;
       source: components["schemas"]["SourceOut"] | null;
       result: components["schemas"]["ResultOut"] | null;
@@ -198,49 +262,10 @@ export interface components {
        */
       title: string;
     };
-    /** Page[FileOut] */
-    Page_FileOut_: {
-      /** Items */
-      items: components["schemas"]["FileOut"][];
-      /** Total */
-      total: number;
-      /** Page */
-      page: number | null;
-      /** Size */
-      size: number | null;
-      /** Pages */
-      pages?: number | null;
-    };
     /** Page[JobOut] */
     Page_JobOut_: {
       /** Items */
       items: components["schemas"]["JobOut"][];
-      /** Total */
-      total: number;
-      /** Page */
-      page: number | null;
-      /** Size */
-      size: number | null;
-      /** Pages */
-      pages?: number | null;
-    };
-    /** Page[NodeOut] */
-    Page_NodeOut_: {
-      /** Items */
-      items: components["schemas"]["NodeOut"][];
-      /** Total */
-      total: number;
-      /** Page */
-      page: number | null;
-      /** Size */
-      size: number | null;
-      /** Pages */
-      pages?: number | null;
-    };
-    /** Page[ProviderOut] */
-    Page_ProviderOut_: {
-      /** Items */
-      items: components["schemas"]["ProviderOut"][];
       /** Total */
       total: number;
       /** Page */
@@ -281,6 +306,11 @@ export interface components {
         }[];
       /** Data */
       data: unknown;
+      /**
+       * Node
+       * @example xxxxx
+       */
+      node: string;
       /**
        * Name
        * @example osfstorage
@@ -464,7 +494,6 @@ export interface operations {
       query?: {
         /** @description Page number */
         page?: number;
-        /** @description Page size */
         size?: number;
       };
     };
@@ -472,7 +501,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["Page_NodeOut_"];
+          "application/json": components["schemas"]["CustomizedPage_NodeOut_"];
         };
       };
       /** @description Validation Error */
@@ -492,7 +521,6 @@ export interface operations {
       query?: {
         /** @description Page number */
         page?: number;
-        /** @description Page size */
         size?: number;
       };
       path: {
@@ -503,7 +531,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["Page_ProviderOut_"];
+          "application/json": components["schemas"]["CustomizedPage_ProviderOut_"];
         };
       };
       /** @description Validation Error */
@@ -523,7 +551,6 @@ export interface operations {
       query?: {
         /** @description Page number */
         page?: number;
-        /** @description Page size */
         size?: number;
       };
       path: {
@@ -534,7 +561,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["Page_NodeOut_"];
+          "application/json": components["schemas"]["CustomizedPage_NodeOut_"];
         };
       };
       /** @description Validation Error */
@@ -554,7 +581,6 @@ export interface operations {
       query?: {
         /** @description Page number */
         page?: number;
-        /** @description Page size */
         size?: number;
       };
       path: {
@@ -566,7 +592,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["Page_FileOut_"];
+          "application/json": components["schemas"]["CustomizedPage_FileOut_"];
         };
       };
       /** @description Validation Error */
@@ -584,9 +610,9 @@ export interface operations {
   retrieve_node_files_nodes__node_id__providers__provider_id___filepath__get: {
     parameters: {
       query?: {
+        action?: components["schemas"]["FileAction"] | null;
         /** @description Page number */
         page?: number;
-        /** @description Page size */
         size?: number;
       };
       path: {
@@ -599,7 +625,7 @@ export interface operations {
       /** @description Successful Response */
       200: {
         content: {
-          "application/json": components["schemas"]["Page_FileOut_"];
+          "application/json": components["schemas"]["CustomizedPage_FileOut_"];
         };
       };
       /** @description Validation Error */

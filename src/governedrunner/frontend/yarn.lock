@@ -304,7 +304,7 @@
   dependencies:
     "@babel/runtime" "^7.23.2"
 
-"@mui/material@^5.0.0", "@mui/material@^5.14.18", "@mui/material@^5.8.6":
+"@mui/material@^5.0.0", "@mui/material@^5.14.18", "@mui/material@^5.4.1", "@mui/material@^5.8.6":
   version "5.14.18"
   resolved "https://registry.npmjs.org/@mui/material/-/material-5.14.18.tgz"
   integrity sha512-y3UiR/JqrkF5xZR0sIKj6y7xwuEiweh9peiN3Zfjy1gXWXhz5wjlaLdoxFfKIEBUFfeQALxr/Y8avlHH+B9lpQ==
@@ -341,7 +341,7 @@
     csstype "^3.1.2"
     prop-types "^15.8.1"
 
-"@mui/system@^5.14.18", "@mui/system@^5.8.0":
+"@mui/system@^5.14.18", "@mui/system@^5.4.1", "@mui/system@^5.8.0":
   version "5.14.18"
   resolved "https://registry.npmjs.org/@mui/system/-/system-5.14.18.tgz"
   integrity sha512-hSQQdb3KF72X4EN2hMEiv8EYJZSflfdd1TRaGPoR7CIAG347OxCslpBUwWngYobaxgKvq6xTrlIl+diaactVww==
@@ -360,7 +360,7 @@
   resolved "https://registry.npmjs.org/@mui/types/-/types-7.2.9.tgz"
   integrity sha512-k1lN/PolaRZfNsRdAqXtcR71sTnv3z/VCCGPxU8HfdftDkzi335MdJ6scZxvofMAd/K/9EbzCZTFBmlNpQVdCg==
 
-"@mui/utils@^5.14.14", "@mui/utils@^5.14.18":
+"@mui/utils@^5.14.14", "@mui/utils@^5.14.16", "@mui/utils@^5.14.18":
   version "5.14.18"
   resolved "https://registry.npmjs.org/@mui/utils/-/utils-5.14.18.tgz"
   integrity sha512-HZDRsJtEZ7WMSnrHV9uwScGze4wM/Y+u6pDVo+grUjt5yXzn+wI8QX/JwTHh9YSw/WpnUL80mJJjgCnWj2VrzQ==
@@ -369,6 +369,17 @@
     "@types/prop-types" "^15.7.10"
     prop-types "^15.8.1"
     react-is "^18.2.0"
+
+"@mui/x-data-grid@^6.18.2":
+  version "6.18.2"
+  resolved "https://registry.npmjs.org/@mui/x-data-grid/-/x-data-grid-6.18.2.tgz"
+  integrity sha512-XsVX8OCcYRbSoDVfjoX6gi+KfBitTkUvlMZnI/YkWOyms+pEValJQousvwjhGN1coWp15Yoz9YTGmSGCBxo2HA==
+  dependencies:
+    "@babel/runtime" "^7.23.2"
+    "@mui/utils" "^5.14.16"
+    clsx "^2.0.0"
+    prop-types "^15.8.1"
+    reselect "^4.1.8"
 
 "@mui/x-tree-view@^6.17.0":
   version "6.17.0"
@@ -2389,6 +2400,11 @@ regexp.prototype.flags@^1.5.0, regexp.prototype.flags@^1.5.1:
     call-bind "^1.0.2"
     define-properties "^1.2.0"
     set-function-name "^2.0.0"
+
+reselect@^4.1.8:
+  version "4.1.8"
+  resolved "https://registry.npmjs.org/reselect/-/reselect-4.1.8.tgz"
+  integrity sha512-ab9EmR80F/zQTMNeneUr4cv+jSwPJgIlvEmVwLerwrWVbpLlBuls9XHzIeTFy4cegU2NHBp3va0LKOzU5qFEYQ==
 
 resolve-from@^4.0.0:
   version "4.0.0"

@@ -1,16 +1,21 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 
-import { Drawer, Box } from '@mui/material';
+import { Drawer, Box } from "@mui/material";
 
-import { getCurrentUser } from './api/user';
-import { NotebookList } from './components/notebooks';
+import { getCurrentUser } from "./api/user";
+import { File } from "./api/types";
+import { NotebookList } from "./components/notebooks";
+import { CrateList, isNotebook } from "./components/crates";
 
 const drawerWidth = 240;
 
 export default function Home() {
   const [username, setUsername] = useState<string>();
+  const [selectedFile, setSelectedFile] = useState<File | undefined>();
+
+  const notebookOpened = useMemo(() => isNotebook(selectedFile), [selectedFile]);
 
   useEffect(() => {
     getCurrentUser().then((user) => {
@@ -19,37 +24,31 @@ export default function Home() {
   }, []);
 
   return (
-    <Box sx={{ display: 'flex' }}>
-    <Drawer
-      variant="permanent"
-      sx={{
-        width: drawerWidth,
-        flexShrink: 0,
-        '& .MuiDrawer-paper': {
+    <Box sx={{ display: "flex" }}>
+      <Drawer
+        variant="permanent"
+        sx={{
           width: drawerWidth,
-          boxSizing: 'border-box',
-        },
-      }}
-    >
-      <NotebookList
-        onNodeClick={(node) => {
-          console.log('Clicked node', node);
+          flexShrink: 0,
+          "& .MuiDrawer-paper": {
+            width: drawerWidth,
+            boxSizing: "border-box",
+          },
         }}
-        onProviderClick={(provider) => {
-          console.log('Clicked provider', provider);
-        }}
-        onFileClick={(file) => {
-          console.log('Clicked file', file);
-        }}
-      />
-    </Drawer>
+      >
+        <NotebookList
+          onFileClick={(file) => {
+            const webUrl = file.links.find((link) => link.rel === "web");
+            console.log('Selected', webUrl);
+            setSelectedFile(file);
+          }}
+        />
+      </Drawer>
 
-    <Box
-      component="main"
-      sx={{ flexGrow: 1, bgcolor: 'background.default', p: 3 }}
-    >
-      <div>Main Content Here</div>
+      <Box component="main">
+        {notebookOpened && <CrateList defaultPageSize={10} selectedFile={selectedFile} />}
+        {!notebookOpened && <div>Select a notebook</div>}
+      </Box>
     </Box>
-  </Box>
-  )
+  );
 }

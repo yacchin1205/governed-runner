@@ -7,13 +7,15 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "dev-server": "DEMO_USER=1 uvicorn governedrunner.main:app"
+    "dev-server": "DEMO_USER=1 uvicorn governedrunner.main:app",
+    "generate-openapi-schema": "python -m governedrunner.ui.tools.openapi"
   },
   "dependencies": {
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.14.18",
     "@mui/material": "^5.14.18",
+    "@mui/x-data-grid": "^6.18.2",
     "@mui/x-tree-view": "^6.17.0",
     "next": "14.0.3",
     "react": "^18",

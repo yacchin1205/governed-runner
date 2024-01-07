@@ -1,11 +1,10 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import logging
 import time
 
 import httpx
 from starlette.responses import RedirectResponse
 from starlette.config import Config
-from starlette.exceptions import HTTPException
 
 from authlib.integrations.starlette_client import OAuth
 from governedrunner.api.demo import USERNAME as DEMO_USERNAME
@@ -77,7 +76,7 @@ async def get_user(request, db):
     r = db.query(User).filter(User.name == username).first()
     if r is not None:
         return r
-    u = User(name=username, created_at=datetime.now())
+    u = User(name=username, created_at=datetime.now(timezone.utc))
     db.add(u)
     db.commit()
     db.refresh(u)

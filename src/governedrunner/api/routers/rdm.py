@@ -7,72 +7,32 @@ from urllib.parse import urlencode
 from fastapi import (
     APIRouter,
     Depends,
-    HTTPException,
     Query,
+    HTTPException,
 )
 from fastapi_pagination import Page, paginate
 from fastapi_pagination.api import apply_items_transformer, create_page
 from fastapi_pagination.bases import AbstractParams
 from fastapi_pagination.types import AdditionalData, ItemsTransformer
 from fastapi_pagination.utils import verify_params
-import httpx
-from sqlalchemy import select
-from sqlalchemy.orm import Session
 from starlette.requests import Request
 
+from governedrunner.api.rdm import RDMService
 from governedrunner.api.auth import get_current_user
 from governedrunner.api.models import NodeOut, ProviderOut, FileOut
-from governedrunner.api.settings import Settings
-from governedrunner.db.models import User, RDMToken
+from governedrunner.db.models import User
 
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-settings = Settings()
-
 Page = Page.with_custom_options(
     size=Query(10, ge=1, le=50),
 )
 
-class RDMService:
-    current_user: User
-
-    def __init__(self, current_user: User):
-        self.current_user = current_user
-
-    @property
-    def _rdm_token(self) -> RDMToken:
-        if self.current_user.rdm_token is None:
-            raise HTTPException(status_code=403, detail='No GakuNin RDM token')
-        return self.current_user.rdm_token
-
-    @property
-    def access_token(self):
-        return self._rdm_token.token
-
-    @property
-    def api_url(self):
-        if self._rdm_token.service_id != settings.rdm_service_id:
-            raise HTTPException(status_code=403, detail='Unexpected GakuNin RDM service ID')
-        return settings.rdm_api_url
-    
-    @property
-    def files_url(self):
-        if self._rdm_token.service_id != settings.rdm_service_id:
-            raise HTTPException(status_code=403, detail='Unexpected GakuNin RDM service ID')
-        return settings.rdm_files_url
-
-    async def get(self, url):
-        headers = {
-            'Authorization': f'Bearer {self.access_token}',
-        }
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(url, headers=headers)
-            if resp.is_error:
-                logger.error(f'Failed to request to GakuNin RDM: {resp}')
-                raise HTTPException(status_code=resp.status_code)
-            return resp.json()
+class FileAction(str, Enum):
+    download = 'download'
+    meta = 'meta'
 
 def get_rdm_service(current_user: Annotated[User, Depends(get_current_user)]):
     return RDMService(current_user)
@@ -82,6 +42,52 @@ def _get_provider_path(provdier):
     provider = attr['provider']
     path = attr['path']
     return f'{provider}{path}'
+
+def _create_links(request: Request, rdm: RDMService, requested_path: str, file: Any):
+    links = []
+    if file['id'].endswith('/'):
+        links.append({
+            'rel': 'files',
+            'href': f'{request.url.scheme}://{request.url.netloc}{requested_path}{file["id"]}',
+        })
+        links.append({
+            'rel': 'web',
+            'href': f'{rdm.web_url}/{file["attributes"]["resource"]}/files/dir/{file["attributes"]["provider"]}{file["attributes"]["materialized"]}',
+        })
+    else:
+        links.append({
+            'rel': 'download',
+            'href': f'{request.url.scheme}://{request.url.netloc}{requested_path}{file["id"]}?action={FileAction.download}',
+        })
+        links.append({
+            'rel': 'meta',
+            'href': f'{request.url.scheme}://{request.url.netloc}{requested_path}{file["id"]}?action={FileAction.meta}',
+        })
+        links.append({
+            'rel': 'web',
+            'href': f'{rdm.web_url}/{file["attributes"]["resource"]}/files/{file["attributes"]["provider"]}{file["attributes"]["path"]}',
+        })
+    links.append({
+        'rel': 'parent',
+        'href': str(request.url),
+    })
+    return links
+
+def _create_file_out(request: Request, rdm: RDMService, requested_path: str, f: Any, content: Optional[Any] = None):
+    return FileOut(
+        id=f['id'],
+        type=f['type'],
+        kind=f['attributes']['kind'],
+        node=f['attributes']['resource'],
+        provider=f['attributes']['provider'],
+        name=f['attributes']['name'],
+        path=f['attributes']['materialized'],
+        created_at=f['attributes'].get('created_utc', None),
+        updated_at=f['attributes'].get('modified_utc', None),
+        links=_create_links(request, rdm, requested_path, f),
+        data=f,
+        content=content,
+    )
 
 async def _paginate_rdm_api(
     rdm: RDMService,
@@ -156,11 +162,18 @@ async def retrieve_node_providers(
         transformer=lambda providers: [ProviderOut(
             id=provider['id'],
             type=provider['type'],
+            node=provider['attributes']['node'],
             name=provider['attributes']['name'],
-            links=[{
-                'rel': 'files',
-                'href': f'{request.url.scheme}://{request.url.netloc}{request.url.path}{_get_provider_path(provider)}',
-            }],
+            links=[
+                {
+                    'rel': 'files',
+                    'href': f'{request.url.scheme}://{request.url.netloc}{request.url.path}{_get_provider_path(provider)}',
+                },
+                {
+                    'rel': 'parent',
+                    'href': str(request.url),
+                }
+            ],
             data=provider,
         ) for provider in providers],
     )
@@ -189,6 +202,10 @@ async def retrieve_node_children(
                 {
                     'rel': 'children',
                     'href': f'{request.url.scheme}://{request.url.netloc}{request.url.path}{node["id"]}/children/',
+                },
+                {
+                    'rel': 'parent',
+                    'href': str(request.url),
                 },
             ],
             data=node,
@@ -219,6 +236,7 @@ async def retrieve_node_files(
     provider_id: str,
     filepath:str,
     request: Request,
+    action: Optional[FileAction] = None,
     rdm: RDMService = Depends(get_rdm_service),
 ):
     '''
@@ -233,18 +251,10 @@ async def retrieve_node_files(
         raise ValueError(f'Unexpected path: {requested_path}')
     requested_path = requested_path[:requested_path.index(requested_base_path) +
                                     len(requested_base_path_without_provider)]
-    return paginate([FileOut(
-        id=f['id'],
-        type=f['type'],
-        kind=f['attributes']['kind'],
-        provider=f['attributes']['provider'],
-        name=f['attributes']['name'],
-        path=f['attributes']['materialized'],
-        links=[
-            {
-                'rel': 'files',
-                'href': f'{request.url.scheme}://{request.url.netloc}{requested_path}{f["id"]}',
-            },
-        ] if f['id'].endswith('/') else [],
-        data=f,
-    ) for f in files])
+    content = None
+    if not isinstance(files, list):
+        content = None
+        if action == FileAction.download:
+            content = await rdm.get(f'{rdm.files_url}/resources/{node_id}/providers/{provider_id}/{filepath}')
+        return paginate([_create_file_out(request, rdm, requested_path, files, content)])
+    return paginate([_create_file_out(request, rdm, requested_path, f) for f in files])

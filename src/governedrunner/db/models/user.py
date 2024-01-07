@@ -9,7 +9,8 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String, unique=True, index=True)
-    created_at = Column(DateTime, index=True)
+    created_at = Column(DateTime(timezone=True), index=True)
+    updated_at = Column(DateTime(timezone=True), index=True)
 
     rdm_token = relationship(
         'RDMToken',
@@ -22,8 +23,8 @@ class RDMToken(Base):
     id = Column(Integer, primary_key=True, index=True)
     service_id = Column(String, index=True)
     token = Column(String, index=True)
-    created_at = Column(DateTime, index=True)
-    expired_at = Column(DateTime, nullable=True, index=True)
+    created_at = Column(DateTime(timezone=True), index=True)
+    expired_at = Column(DateTime(timezone=True), nullable=True, index=True)
     owner_id = Column(Integer, ForeignKey('users.id'))
 
     owner = relationship('User', back_populates='rdm_token')

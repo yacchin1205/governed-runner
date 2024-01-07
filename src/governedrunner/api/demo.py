@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.orm import Session
 
 from governedrunner.db.models import User
@@ -10,7 +10,12 @@ def get_current_user(db: Session):
     u = db.query(User).filter(User.id == CURRENT_USER_ID).first()
     if u is not None:
         return u
-    u = User(id=CURRENT_USER_ID, name=USERNAME, created_at=datetime.now())
+    u = User(
+        id=CURRENT_USER_ID,
+        name=USERNAME,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+    )
     db.add(u)
     db.commit()
     db.refresh(u)

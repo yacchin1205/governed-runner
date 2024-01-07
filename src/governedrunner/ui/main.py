@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 import subprocess
 
@@ -44,11 +44,12 @@ def _update_rdm_token(user, request, db):
     rdm_token = RDMToken(
         owner=user,
         token=token,
-        created_at=datetime.now(),
+        created_at=datetime.now(timezone.utc),
         expired_at=None,
         service_id=service,
     )
     db.add(rdm_token)
+    user.updated_at = datetime.now(timezone.utc)
     db.commit()
     return True
 

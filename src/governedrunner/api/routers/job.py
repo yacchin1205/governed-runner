@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 import uuid
 from typing import Optional, Annotated
@@ -9,9 +9,7 @@ from fastapi import (
     Depends,
     HTTPException,
     WebSocket,
-    File,
     Form,
-    UploadFile,
 )
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
@@ -44,17 +42,15 @@ def retrieve_jobs(
     '''
     return paginate(db, select(Job) \
         .where(Job.owner == current_user) \
-        .order_by(Job.created_at))
+        .order_by(Job.updated_at))
 
 
 @router.post('/jobs/', response_model=JobOut)
 def create_job(
     current_user: Annotated[User, Depends(get_current_user)],
     bakcground_tasks: BackgroundTasks,
-#    file: UploadFile = File(None),
     file_url: str = Form(),
     type: FileType = Form(FileType.run_crate),
-#    context_url: str = Form(None),
     use_snapshot: bool = Form(False),
     db: Session = Depends(get_db),
 ):
@@ -62,7 +58,13 @@ def create_job(
     ジョブを実行します。
     '''
     job_id = str(uuid.uuid4())
-    job = Job(id=job_id, created_at=datetime.now(), owner=current_user)
+    job = Job(
+        id=job_id,
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
+        owner=current_user,
+        source_url=file_url,
+    )
     db.add(job)
     db.commit()
     db.refresh(job)
