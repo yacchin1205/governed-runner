@@ -9,3 +9,6 @@ fastapi-pagination
 pydantic-settings
 python-multipart
 toml
+jupyterhub
+aiodocker
+dockerspawner

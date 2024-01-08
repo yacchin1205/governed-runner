@@ -1,4 +1,5 @@
 import httpx
+import json
 import logging
 
 from fastapi import (
@@ -44,6 +45,15 @@ class RDMService:
             raise HTTPException(status_code=403, detail='Unexpected GakuNin RDM service ID')
         return settings.rdm_web_url
     
+    @property
+    def repo2docker_hosts_json(self):
+        config = [{
+            'hostname': [self.web_url],
+            'api': self.api_url,
+            'token': self.access_token,
+        }]
+        return json.dumps(config)
+
     @property
     def _headers(self):
         headers = {

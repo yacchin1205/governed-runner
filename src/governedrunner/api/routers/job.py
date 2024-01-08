@@ -58,6 +58,8 @@ def create_job(
     ジョブを実行します。
     '''
     job_id = str(uuid.uuid4())
+    if type == FileType.run_crate:
+        file_url = f'crate+{file_url}'
     job = Job(
         id=job_id,
         created_at=datetime.now(timezone.utc),

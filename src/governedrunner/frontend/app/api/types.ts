@@ -70,7 +70,7 @@ export interface File {
   provider: string;
   name: string;
   path: string;
-  created_at: string;
-  updated_at: string;
+  created_at: string | null;
+  updated_at: string | null;
   links: Link[];
 }
