@@ -1,9 +1,10 @@
+from collections.abc import Callable
 from traitlets.config import LoggingConfigurable
 from jupyterhub.spawner import Spawner
 
 
 class ProcessTracker:
-    async def wait(self):
+    async def wait(self, log_stream_callback: Callable[[str, str], None]):
         """
         Wait for the process to finish.
         """

@@ -6,8 +6,9 @@ import { PlayArrow } from "@mui/icons-material";
 
 import { DataGrid } from "@mui/x-data-grid";
 import { getCrates, getJobs } from "../api/crates";
-import { createNotebookJob } from "../api/jobs";
-import { Pagination, File, Link } from "../api/types";
+import { createNotebookJob, createRunCrateJob } from "../api/jobs";
+import { Pagination, File } from "../api/types";
+import { Job, JobStatus } from "./job";
 
 interface Param {
   defaultPageSize?: number | undefined;
@@ -16,15 +17,6 @@ interface Param {
 
 interface RDMRef {
   url: string | null;
-}
-
-interface Job {
-  id: string;
-  created_at: string | null;
-  updated_at: string | null;
-  name?: string;
-  status?: "running" | "completed" | "failed" | null;
-  links?: Link[];
 }
 
 const STATUS_INTERVAL = 100;
@@ -45,18 +37,21 @@ async function getAllJobs(
 ): Promise<Job[]> {
   let jobs: Job[] = [];
   jobs = jobs.concat(
-    await getCrates(selectedFile, undefined).then((data) =>
+    await getCrates(selectedFile).then((data) =>
       data.map((crate) =>
         Object.assign({}, crate, {
-          result: crate.links.find((link) => link.rel === "web")?.href,
+          result:
+            crate.links && crate.links.find((link) => link.rel === "web")?.href,
         })
       )
     )
   );
-  const runningJobs = await getJobs(pagination).then((data) => data.items);
+  const runningJobs = await getJobs(selectedFile, pagination).then(
+    (data) => data.items
+  );
   jobs = jobs.concat(
     runningJobs.filter(
-      (job) => !jobs.some((crate) => crate.name?.includes(job.id))
+      (job) => !jobs.some((crate) => crate.id.includes(job.id))
     )
   );
   return jobs
@@ -83,6 +78,7 @@ export function CrateList({ defaultPageSize, selectedFile }: Param) {
   const [crates, setCrates] = useState<Job[]>([]);
   const [loadedFile, setLoadedFile] = useState<File | undefined>();
   const [requestedCrate, setRequestedCrate] = useState<Job | undefined>();
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
   const pagination: Pagination | undefined = useMemo(
     () =>
       defaultPageSize !== undefined
@@ -91,6 +87,15 @@ export function CrateList({ defaultPageSize, selectedFile }: Param) {
           }
         : undefined,
     [defaultPageSize]
+  );
+  const notebookName = useMemo(
+    () =>
+      selectedFile
+        ? selectedFile.path.match(/^\/.+/)
+          ? selectedFile.path.substring(1)
+          : selectedFile.path
+        : null,
+    [selectedFile]
   );
 
   useEffect(() => {
@@ -102,7 +107,7 @@ export function CrateList({ defaultPageSize, selectedFile }: Param) {
     }
     const crate = newCrates[0];
     if (crate.id === requestedCrate?.id) {
-        return;
+      return;
     }
     setRequestedCrate(crate);
     setTimeout(() => {
@@ -118,7 +123,7 @@ export function CrateList({ defaultPageSize, selectedFile }: Param) {
           })
         );
         setRequestedCrate(undefined);
-    });
+      });
     }, STATUS_INTERVAL);
   }, [crates, requestedCrate]);
 
@@ -130,6 +135,7 @@ export function CrateList({ defaultPageSize, selectedFile }: Param) {
     if (selectedFile.id === loadedFile?.id) {
       return;
     }
+    setCrates([]);
     getAllJobs(selectedFile, pagination).then((data) => {
       setLoadedFile(selectedFile);
       setCrates(data);
@@ -150,10 +156,23 @@ export function CrateList({ defaultPageSize, selectedFile }: Param) {
     setLoadedFile(undefined);
   }, [selectedFile]);
 
+  const createRerunJob = useCallback(async (url: string) => {
+    await createRunCrateJob(url);
+    setLoadedFile(undefined);
+  }, []);
+
   return (
-    <Box sx={{ flexGrow: 1, height: "calc(100vh - 64px)" }}>
+    <Box sx={{ flexGrow: 1, height: "calc(100vh - 64px)", minWidth: "80vw" }}>
       <AppBar position="static" color="default">
         <Toolbar>
+          <div>
+            {selectedJob ? (
+              <a onClick={() => setSelectedJob(null)}>{notebookName}</a>
+            ) : (
+              notebookName
+            )}
+            {selectedJob && <span> &gt; Job {selectedJob.id}</span>}
+          </div>
           <Button
             color="inherit"
             startIcon={<RefreshIcon />}
@@ -163,40 +182,54 @@ export function CrateList({ defaultPageSize, selectedFile }: Param) {
           >
             Reload
           </Button>
-          <Button color="inherit" startIcon={<PlayArrow />} onClick={createJob}>
-            Run
-          </Button>
+          {!selectedJob && (
+            <Button
+              color="inherit"
+              startIcon={<PlayArrow />}
+              onClick={createJob}
+            >
+              Run
+            </Button>
+          )}
         </Toolbar>
       </AppBar>
-      <DataGrid
-        rows={crates}
-        columns={[
-          { field: "id", headerName: "ID", width: 70 },
-          { field: "created_at", headerName: "Created", width: 200 },
-          { field: "updated_at", headerName: "Updated", width: 200 },
-          { field: "status", headerName: "Status", width: 200 },
-          {
-            field: "result",
-            headerName: "Result",
-            renderCell: (params) =>
-              typeof params.value === "string" ? (
-                <Button
-                  variant="contained"
-                  size="small"
-                  href={params.value as string}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Result
-                </Button>
-              ) : (
-                <></>
-              ),
-            width: 200,
-          },
-        ]}
-        checkboxSelection
-      />
+      {selectedJob && <JobStatus job={selectedJob} />}
+      {!selectedJob && (
+        <DataGrid
+          rows={crates}
+          onRowClick={(params) => {
+            setSelectedJob(params.row);
+          }}
+          columns={[
+            { field: "id", headerName: "ID", width: 70 },
+            { field: "created_at", headerName: "Created", width: 200 },
+            { field: "updated_at", headerName: "Updated", width: 200 },
+            { field: "status", headerName: "Status", width: 200 },
+            {
+              field: "result",
+              headerName: "Result",
+              renderCell: (params) =>
+                typeof params.value === "string" ? (
+                  <>
+                    <Button
+                      variant="contained"
+                      size="small"
+                      color="inherit"
+                      startIcon={<PlayArrow />}
+                      onClick={() => createRerunJob(params.value as string)}
+                    >
+                      Re-run
+                    </Button>
+                  </>
+                ) : (
+                  <></>
+                ),
+              width: 200,
+            },
+          ]}
+          checkboxSelection
+        />
+      )}
     </Box>
   );
 }

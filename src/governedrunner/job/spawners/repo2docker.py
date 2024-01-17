@@ -290,13 +290,15 @@ class SpawnerMixin(Configurable):
                     exec = await obj.exec(["/bin/sh","-c","xattr -w command terminate /mnt/rdm"])
                     result = await exec.start(detach=True)
                     self.log.info('terminated: {}'.format(result))
+                    self.log.info('deleting...')
+                    await obj.delete()
                 else:
                     self.log.info('deleting...')
                     await obj.delete()
         except DockerError as e:
             if e.status == 409:
                 self.log.debug(
-                    "Already removing %s: %s", self.object_type, object_id
+                    "Already removed %s: %s", self.object_type, object_id
                 )
             elif e.status == 404:
                 self.log.debug(

@@ -8,7 +8,9 @@ from starlette.exceptions import HTTPException
 from starlette.responses import FileResponse, RedirectResponse
 from starlette.routing import Route, Mount
 from starlette.staticfiles import StaticFiles
+from starlette.routing import WebSocketRoute
 
+from governedrunner.api.tasks.job import get_job_queue
 from governedrunner.db.database import SessionLocal
 from governedrunner.db.models import RDMToken
 from . import auth
@@ -69,9 +71,23 @@ async def homepage(request):
     finally:
         db.close()
 
+async def websocket_log(websocket):
+    job_id = websocket.path_params["job_id"]
+    await websocket.accept()
+    q = get_job_queue(job_id)
+    if q is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+    while True:
+        status, log = await q.get()
+        await websocket.send_json({'status': status, 'log': log})
+        if status == 'completed' or status == 'failed':
+            break
+    await websocket.close()
+
 build_path = _ensure_frontend()
 
 app = Starlette(routes=routes + [
     Route('/', endpoint=homepage),
+    WebSocketRoute('/ws/jobs/{job_id}/progress', endpoint=websocket_log),
     Mount('/', StaticFiles(directory=build_path, html=True), name='static'),
 ])

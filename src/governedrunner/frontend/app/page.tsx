@@ -46,7 +46,7 @@ export default function Home() {
       </Drawer>
 
       <Box component="main">
-        {notebookOpened && <CrateList defaultPageSize={10} selectedFile={selectedFile} />}
+        {notebookOpened && <CrateList defaultPageSize={50} selectedFile={selectedFile} />}
         {!notebookOpened && <div>Select a notebook</div>}
       </Box>
     </Box>

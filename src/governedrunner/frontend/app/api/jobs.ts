@@ -21,3 +21,19 @@ export const createNotebookJob = async (
     }).then((res) => res.json());
   return response;
 };
+
+export const createRunCrateJob = async (
+  url: string,
+  pagination: Pagination | undefined = undefined
+) => {
+  const formData = new FormData();
+  formData.append("file_url", url);
+  formData.append("type", "run-crate");
+  const response: paths["/jobs/"]["post"]["responses"][200]["content"]["application/json"] =
+    await fetch(`${endpoint}/jobs/${toPageQuery(pagination)}`, {
+      method: "POST",
+      credentials: "include",
+      body: formData,
+    }).then((res) => res.json());
+  return response;
+};

@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from enum import Enum
+import logging
 import uuid
 from typing import Optional, Annotated
 
@@ -8,7 +9,6 @@ from fastapi import (
     BackgroundTasks,
     Depends,
     HTTPException,
-    WebSocket,
     Form,
 )
 from fastapi_pagination import Page
@@ -18,7 +18,9 @@ from sqlalchemy.orm import Session
 
 from governedrunner.api.auth import get_current_user
 from governedrunner.api.models import JobOut
+from governedrunner.api.models.job import State
 from governedrunner.api.tasks import create_new_job
+from governedrunner.api.tasks.job import create_new_job_queue
 from governedrunner.db.database import get_db
 from governedrunner.db.models import Job, User
 
@@ -29,20 +31,25 @@ class FileType(str, Enum):
 
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.get('/jobs/', response_model=Page[JobOut])
 def retrieve_jobs(
     current_user: Annotated[User, Depends(get_current_user)],
-    state: Optional[str] = None,
+    state: Optional[State] = None,
+    notebook: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
     '''
     現在のユーザーが実行した全てのジョブを取得します。
     '''
-    return paginate(db, select(Job) \
-        .where(Job.owner == current_user) \
-        .order_by(Job.updated_at))
+    query = select(Job).where(Job.owner == current_user)
+    if state is not None:
+        query = query.filter(Job.status == state)
+    if notebook is not None:
+        query = query.filter(Job.notebook == notebook)
+    return paginate(db, query.order_by(Job.updated_at))
 
 
 @router.post('/jobs/', response_model=JobOut)
@@ -60,12 +67,14 @@ def create_job(
     job_id = str(uuid.uuid4())
     if type == FileType.run_crate:
         file_url = f'crate+{file_url}'
+    create_new_job_queue(job_id)
     job = Job(
         id=job_id,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
         owner=current_user,
         source_url=file_url,
+        use_snapshot=use_snapshot,
     )
     db.add(job)
     db.commit()
@@ -88,13 +97,3 @@ def retrieve_job(
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
-
-
-@router.websocket('/jobs/{job_id}/progress')
-async def stream_job_progress(job_id: str, websocket: WebSocket):
-    '''
-    ジョブの進行状況を取得します。
-    '''
-    # TBD
-    await websocket.accept()
-    await websocket.send_json({'test': True})

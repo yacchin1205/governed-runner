@@ -3,8 +3,15 @@ from enum import Enum
 from typing import Optional
 from pydantic import BaseModel, Field, root_validator
 from pydantic.utils import GetterDict
+from starlette.config import Config
+
+
+config = Config('.env')
+PREFIX = config('GOVERNEDRUNNER_BASE_PATH', cast=str, default='')
+
 
 class State(str, Enum):
+    building = 'building'
     running = 'running'
     completed = 'completed'
     failed = 'failed'
@@ -30,6 +37,8 @@ class JobOut(BaseModel):
     source: Optional[SourceOut]
     result: Optional[ResultOut]
     progress: Optional[ProgressOut]
+    notebook: Optional[str]
+    log: Optional[str]
 
     @root_validator(pre=True)
     def get_result_value(cls, values: GetterDict) -> GetterDict:
@@ -43,7 +52,7 @@ class JobOut(BaseModel):
                 'source': source,
                 'result': None,
                 'progress': {
-                    'url': f'/jobs/{values.id}/progress',
+                    'url': PREFIX + f'/ws/jobs/{values.id}/progress',
                 },
             } | values.__dict__
         return {

@@ -3,7 +3,7 @@ import re
 from urllib.parse import urlparse
 
 from aiodocker import Docker
-from traitlets import Unicode, Dict, List
+from traitlets import Unicode, Dict, List, Callable
 
 from governedrunner.api.rdm import RDMService
 from .base import ImageBuilder
@@ -28,6 +28,12 @@ class DockerImageBuilder(ImageBuilder):
     extra_buildargs = List(
         [],
         help="""Extra build arguments to pass to the builder.
+        """,
+    ).tag(config=True)
+
+    log_stream_callback = Callable(
+        None,
+        help="""Callback function to call when log is emitted.
         """,
     ).tag(config=True)
 
@@ -97,6 +103,8 @@ class DockerImageBuilder(ImageBuilder):
         async with Docker() as docker:
             container = await docker.containers.run(config=config)
             async for log in container.log(stdout=True, stderr=True, follow=True):
+                if self.log_stream_callback is not None:
+                    self.log_stream_callback('building', log)
                 log = log.rstrip("\n")
                 m = reuse_pattern.match(log)
                 if m:
@@ -109,5 +117,5 @@ class DockerImageBuilder(ImageBuilder):
                 self.log.info(f'Builder({source_url}): {log}')
             if image is None:
                 raise RuntimeError('Failed to build image')
-            container.delete()
+            await container.delete()
         return image

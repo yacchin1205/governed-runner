@@ -96,7 +96,7 @@ export interface components {
       /** Items */
       items: components["schemas"]["FileOut"][];
       /** Total */
-      total: number;
+      total: number | null;
       /** Page */
       page: number | null;
       /** Size */
@@ -109,7 +109,7 @@ export interface components {
       /** Items */
       items: components["schemas"]["NodeOut"][];
       /** Total */
-      total: number;
+      total: number | null;
       /** Page */
       page: number | null;
       /** Size */
@@ -122,7 +122,7 @@ export interface components {
       /** Items */
       items: components["schemas"]["ProviderOut"][];
       /** Total */
-      total: number;
+      total: number | null;
       /** Page */
       page: number | null;
       /** Size */
@@ -192,6 +192,8 @@ export interface components {
        * @example 2021-01-01T00:00:00.000000+00:00
        */
       updated_at: string | null;
+      /** Content */
+      content: unknown;
     };
     /**
      * FileType
@@ -224,6 +226,8 @@ export interface components {
       source: components["schemas"]["SourceOut"] | null;
       result: components["schemas"]["ResultOut"] | null;
       progress: components["schemas"]["ProgressOut"] | null;
+      /** Notebook */
+      notebook: string | null;
     };
     /**
      * Kind
@@ -267,7 +271,7 @@ export interface components {
       /** Items */
       items: components["schemas"]["JobOut"][];
       /** Total */
-      total: number;
+      total: number | null;
       /** Page */
       page: number | null;
       /** Size */
@@ -339,7 +343,7 @@ export interface components {
      * State
      * @enum {string}
      */
-    State: "running" | "completed" | "failed";
+    State: "building" | "running" | "completed" | "failed";
     /** UserOut */
     UserOut: {
       /**
@@ -413,7 +417,8 @@ export interface operations {
   retrieve_jobs_jobs__get: {
     parameters: {
       query?: {
-        state?: string | null;
+        state?: components["schemas"]["State"] | null;
+        notebook?: string | null;
         /** @description Page number */
         page?: number;
         /** @description Page size */

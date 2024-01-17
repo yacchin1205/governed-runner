@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, ForeignKey, String, DateTime
+from sqlalchemy import Column, Integer, Boolean, ForeignKey, String, DateTime
 from sqlalchemy.orm import relationship
 
 from ..database import Base
@@ -14,5 +14,8 @@ class Job(Base):
     status = Column(String, nullable=True, index=True)
     source_url = Column(String, nullable=True, index=True)
     result_url = Column(String, nullable=True, index=True)
+    use_snapshot = Column(Boolean, nullable=True, index=True)
+    notebook = Column(String, nullable=True, index=True)
+    log = Column(String, nullable=True, index=False)
 
     owner = relationship('User')

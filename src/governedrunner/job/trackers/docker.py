@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from aiodocker import Docker
 from jupyterhub.spawner import Spawner
 
@@ -14,10 +15,13 @@ class ContainerTracker(ProcessTracker):
     def __init__(self, container):
         self.container = container
 
-    async def wait(self):
+    async def wait(self, log_stream_callback: Callable[[str, str], None]):
         async with Docker() as docker:
             container = await docker.containers.get(self.container)
-            await container.wait()
+            async for log in container.log(stdout=True, stderr=True, follow=True):
+                if log_stream_callback is None:
+                    continue
+                log_stream_callback('running', log)
 
 class DockerTracker(JobTracker):
     async def track_process(self, spawner: Spawner, hostname: str, port: int) -> ProcessTracker:
