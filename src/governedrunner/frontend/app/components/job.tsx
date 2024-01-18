@@ -48,7 +48,11 @@ export function JobStatus({ job }: Params) {
     if (!job.progress || !job.progress.url) {
       return;
     }
-    const url = new URL(job.progress.url, endpoint);
+    let baseURL = endpoint;
+    if (baseURL.match(/^\/.*/)) {
+      baseURL = new URL(baseURL, window.location.href).toString();
+    }
+    const url = new URL(job.progress.url, baseURL);
     url.protocol = url.protocol.replace("http", "ws");
     const websocketURL = url.toString();
     console.log("Job progress", job.progress, websocketURL);
