@@ -9,6 +9,9 @@ def tljh_custom_jupyterhub_config(c):
     service_id = 'service-governedrun'
     client_secret = secrets.token_urlsafe(16)
     service_name = 'Governed-Run'
+    url = os.environ.get('TLJH_BASE_URL', 'http://localhost')
+    if url.endswith('/'):
+        url = url[:-1]
     c.JupyterHub.services.append({
         'name': service_name,
         'admin': False,
@@ -18,14 +21,14 @@ def tljh_custom_jupyterhub_config(c):
         ],
         'oauth_client_id': service_id,
         'api_token': client_secret,
-        'oauth_redirect_uri': f'http://157.1.207.247/services/{service_name}/auth',
+        'oauth_redirect_uri': f'{url}/services/{service_name}/auth',
         'oauth_no_confirm': True,
         'environment': {
             'GOVERNEDRUNNER_BASE_PATH': f'/services/{service_name}',
             'OAUTH2_CLIENT_ID': service_id,
             'OAUTH2_CLIENT_SECRET': client_secret,
             'OAUTH2_TOKEN_URL': 'http://localhost/hub/api/oauth2/token',
-            'OAUTH2_AUTHORIZATION_URL': 'http://157.1.207.247/hub/api/oauth2/authorize',
+            'OAUTH2_AUTHORIZATION_URL': f'{url}/hub/api/oauth2/authorize',
             'USER_PROFILE_URL': 'http://localhost/hub/api/user',
             'USER_PROFILE_PROPNAME': 'name',
             'DEBUG': os.environ.get('DEBUG', ''),
