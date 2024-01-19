@@ -1,10 +1,10 @@
+import os
 from typing import Optional
 from pydantic_settings import BaseSettings
 from traitlets.config import PyFileConfigLoader, Config
 
 
 CRATE_FOLDER_NAME = '.crates'
-DEFAULT_CONFIG_FILENAME = 'governedrunner_config.py'
 
 class Settings(BaseSettings):
     demo_user: bool = False
@@ -18,11 +18,14 @@ class Settings(BaseSettings):
 
     @property
     def jupyterhub_traitlets_config(self) -> Config:
+        from .tasks import job
         if self._config is not None:
             return self._config
         if self.jupyterhub_config is not None:
             loader = PyFileConfigLoader(self.jupyterhub_config)
         else:
-            loader = PyFileConfigLoader(DEFAULT_CONFIG_FILENAME)
+            loader = PyFileConfigLoader(
+                os.path.join(os.path.split(job.__file__)[0],
+                             'governedrunner_config.py'))
         self._config = loader.load_config()
         return self._config
