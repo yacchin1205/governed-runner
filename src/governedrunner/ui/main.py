@@ -27,6 +27,10 @@ def _ensure_frontend():
     if not FORCE_BUILD_FRONTEND and os.path.exists(build_path):
         return build_path
     subprocess.check_call(
+        ['npm', 'install'],
+        cwd=frontend_path,
+    )
+    subprocess.check_call(
         ['npm', 'run', 'build'],
         cwd=frontend_path,
     )
