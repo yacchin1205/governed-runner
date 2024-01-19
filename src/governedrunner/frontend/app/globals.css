@@ -18,14 +18,6 @@
 
 body {
   color: rgb(var(--foreground-rgb));
-  /*
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
-  */
 }
 
 .gr-other-file {
@@ -69,7 +61,7 @@ body {
 .gr-job-status {
   position: status;
   width: calc(100vw - 300px);
-  height: calc(100vh - 200px);
+  height: calc(100vh - 230px);
   overflow: scroll;
   background-color: black;
   color: white;

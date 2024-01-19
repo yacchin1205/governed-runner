@@ -1,5 +1,6 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useState, useEffect } from "react";
 
+import { paths } from "../api/schema";
 import { endpoint, Link } from "../api/types";
 
 export interface Job {
@@ -13,16 +14,38 @@ export interface Job {
     url: string | null;
   } | null;
   log?: string | null;
+  output?: string | null;
+  outputWeb?: string | null;
 }
 
 interface Params {
   job: Job;
+  onError?: (err: any) => void;
 }
 
-export function JobStatus({ job }: Params) {
+export function toAPIURL(wbURL: string): string {
+  const wbMatch = wbURL.match(/.+\/resources\/(.+)\/providers\/(.+)/);
+  if (!wbMatch) {
+    throw new Error(`Invalid download link: ${wbURL}`);
+  }
+  return `${endpoint}/nodes/${wbMatch[1]}/providers/${wbMatch[2]}`;
+}
+
+export async function getRDMURL(wbURL: string): Promise<string> {
+  const apiURL = toAPIURL(wbURL);
+  const response = await fetch(apiURL);
+  const data: paths["/nodes/{node_id}/providers/{provider_id}/"]["get"]["responses"][200]["content"]["application/json"] =
+    await response.json();
+  if (data.items.length === 0) {
+    throw new Error(`Load failed: ${apiURL}`);
+  }
+  return data.items[0].links.find((link) => link.rel === "web")?.href || "";
+}
+
+export function JobStatus({ job, onError }: Params) {
   const [status, setStatus] = useState(job.status);
+  const [notebookURL, setNotebookURL] = useState<string | undefined>(undefined);
   const [logs, setLogs] = useState<string[] | undefined>(undefined);
-  //   const [statusInterval, setStatusInterval] = useState<number | null>(null);
 
   const onMessage = useCallback(
     (event: MessageEvent<string>) => {
@@ -43,9 +66,8 @@ export function JobStatus({ job }: Params) {
     [logs]
   );
 
-  React.useEffect(() => {
-    console.log("Job", job);
-    if (logs === undefined && job.log) {
+  useEffect(() => {
+    if (logs === undefined && job.log !== undefined && job.log !== null) {
       setLogs([job.log]);
     }
     if (!job.progress || !job.progress.url) {
@@ -58,7 +80,6 @@ export function JobStatus({ job }: Params) {
     const url = new URL(job.progress.url, baseURL);
     url.protocol = url.protocol.replace("http", "ws");
     const websocketURL = url.toString();
-    console.log("Job progress", job.progress, websocketURL);
     const websocket = new WebSocket(websocketURL);
     websocket.addEventListener("message", onMessage);
     return () => {
@@ -66,6 +87,22 @@ export function JobStatus({ job }: Params) {
       websocket.removeEventListener("message", onMessage);
     };
   }, [status, job, logs, onMessage]);
+
+  useEffect(() => {
+    if (!job.output) {
+      return;
+    }
+    getRDMURL(job.output)
+      .then((url) => {
+        setNotebookURL(url);
+      })
+      .catch((err) => {
+        console.error(err);
+        if (onError) {
+          onError(err);
+        }
+      });
+  }, [job, onError]);
 
   return (
     <div>
@@ -76,6 +113,11 @@ export function JobStatus({ job }: Params) {
         Created:{" "}
         <span className="gr-job-status-indicator">{job.created_at}</span>
       </div>
+      {notebookURL && (
+        <div>
+          Output: <a href={notebookURL}>{notebookURL}</a>
+        </div>
+      )}
       <div>Logs:</div>
       {logs === undefined && <div className="gr-job-no-status">No logs</div>}
       {logs !== undefined && (

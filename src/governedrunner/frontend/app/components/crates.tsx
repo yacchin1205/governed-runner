@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { AppBar, Box, Toolbar, Button, CircularProgress } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import { PlayArrow } from "@mui/icons-material";
+import { OpenInNew, PlayArrow } from "@mui/icons-material";
 
 import { DataGrid } from "@mui/x-data-grid";
 import { getCrates, getJobs } from "../api/crates";
 import { createNotebookJob, createRunCrateJob } from "../api/jobs";
-import { Pagination, File, endpoint } from "../api/types";
-import { Job, JobStatus } from "./job";
+import { paths } from "../api/schema";
+import { Pagination, File } from "../api/types";
+import { Job, JobStatus, toAPIURL, getRDMURL } from "./job";
 
 interface Param {
   defaultPageSize?: number | undefined;
@@ -73,17 +74,22 @@ async function getCrate(crate: Job): Promise<any> {
   if (!wbLink) {
     throw new Error("No download link");
   }
-  const wbMatch = wbLink.href.match(/.+\/resources\/(.+)\/providers\/(.+)/);
-  if (!wbMatch) {
-    throw new Error(`Invalid download link: ${wbLink.href}`);
-  }
-  const crateLink = `${endpoint}/nodes/${wbMatch[1]}/providers/${wbMatch[2]}?action=download`;
+  const crateLink = `${toAPIURL(wbLink.href)}?action=download`;
   const resp = await fetch(crateLink);
-  const data = await resp.json();
+  const data: paths["/nodes/{node_id}/providers/{provider_id}/"]["get"]["responses"][200]["content"]["application/json"] =
+    await resp.json();
   if (data.items.length === 0) {
     throw new Error(`Load failed: ${crateLink}`);
   }
-  return data.items[0].content;
+  const content: any = data.items[0].content;
+  const outputEntities = content["@graph"].filter(
+    (e: any) => e["@type"] === "File" && e["@id"].match(/^output-.+\.ipynb$/)
+  );
+  if (outputEntities.length === 0) {
+    return { content };
+  }
+  const outputWeb = await getRDMURL(outputEntities[0]["rdmURL"]);
+  return { content: data.items[0].content, outputWeb };
 }
 
 export function CrateList({ defaultPageSize, selectedFile, onError }: Param) {
@@ -125,28 +131,35 @@ export function CrateList({ defaultPageSize, selectedFile, onError }: Param) {
     setRequestedCrate(crate);
     setTimeout(() => {
       getCrate(crate)
-        .then((content) => {
+        .then(({ content, outputWeb }) => {
           if (!content) {
             setRequestedCrate(undefined);
             return;
           }
-          console.log("CRATE", content);
-          const entities = content["@graph"].filter(
+          const logEntities = content["@graph"].filter(
             (e: any) =>
               e["@type"] === "File" && e["@id"].match(/^runner-.+\.log$/)
           );
-          if (entities.length === 0) {
-            setRequestedCrate(undefined);
-            return;
+          const outputEntities = content["@graph"].filter(
+            (e: any) =>
+              e["@type"] === "File" && e["@id"].match(/^output-.+\.ipynb$/)
+          );
+          const extra: any = {};
+          if (logEntities.length > 0) {
+            extra.log = logEntities[0]["text"];
+          }
+          if (outputEntities.length > 0) {
+            extra.output = outputEntities[0]["rdmURL"];
+          }
+          if (outputWeb) {
+            extra.outputWeb = outputWeb;
           }
           setCrates(
             crates.map((c) => {
               if (c.id !== crate.id) {
                 return c;
               }
-              return Object.assign({}, c, {
-                log: entities[0]["text"],
-              });
+              return Object.assign({}, c, extra);
             })
           );
           setRequestedCrate(undefined);
@@ -196,14 +209,28 @@ export function CrateList({ defaultPageSize, selectedFile, onError }: Param) {
     if (!selectedFile.name.endsWith(".ipynb")) {
       return;
     }
-    await createNotebookJob(selectedFile);
-    setLoadedFile(undefined);
-  }, [selectedFile]);
+    try {
+      await createNotebookJob(selectedFile);
+      setLoadedFile(undefined);
+    } catch (err) {
+      console.error(err);
+      if (onError) {
+        onError(err);
+      }
+    }
+  }, [selectedFile, onError]);
 
   const createRerunJob = useCallback(async (url: string) => {
-    await createRunCrateJob(url);
-    setLoadedFile(undefined);
-  }, []);
+    try {
+      await createRunCrateJob(url);
+      setLoadedFile(undefined);
+    } catch (err) {
+      console.error(err);
+      if (onError) {
+        onError(err);
+      }
+    }
+  }, [onError]);
 
   return (
     <Box
@@ -232,15 +259,17 @@ export function CrateList({ defaultPageSize, selectedFile, onError }: Param) {
               Run
             </Button>
           )}
-          <Button
-            color="inherit"
-            startIcon={<RefreshIcon />}
-            onClick={() => {
-              setLoadedFile(undefined);
-            }}
-          >
-            Reload
-          </Button>
+          {!selectedJob && (
+            <Button
+              color="inherit"
+              startIcon={<RefreshIcon />}
+              onClick={() => {
+                setLoadedFile(undefined);
+              }}
+            >
+              Reload
+            </Button>
+          )}
         </Toolbar>
       </AppBar>
       {selectedJob && <JobStatus job={selectedJob} />}
@@ -263,13 +292,45 @@ export function CrateList({ defaultPageSize, selectedFile, onError }: Param) {
             setSelectedJob(params.row);
           }}
           columns={[
-            { field: "id", headerName: "ID", width: 70 },
+            { field: "id", headerName: "ID", width: 200 },
             { field: "created_at", headerName: "Created", width: 200 },
             { field: "updated_at", headerName: "Updated", width: 200 },
             { field: "status", headerName: "Status", width: 200 },
             {
+              field: "outputWeb",
+              headerName: "Output",
+              renderCell: (params) => {
+                if (params.row.status !== "completed") {
+                  return <></>;
+                }
+                if (params.row.links === undefined) {
+                  return <></>;
+                }
+                if (params.value === undefined) {
+                  return <CircularProgress size={18} />;
+                }
+                if (params.value === null) {
+                  return <CircularProgress size={18} />;
+                }
+                return (
+                  <Button
+                    href={params.value}
+                    variant="contained"
+                    size="small"
+                    color="inherit"
+                    startIcon={<OpenInNew />}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    Open
+                  </Button>
+                );
+              },
+              width: 200,
+            },
+            {
               field: "result",
-              headerName: "Result",
+              headerName: "Action",
               renderCell: (params) =>
                 typeof params.value === "string" ? (
                   <>

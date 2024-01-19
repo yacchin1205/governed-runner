@@ -65,7 +65,7 @@ async def modify_crate(rdm: RDMService, id: str, crate_file_url: str, crate_fold
     result_file_json = json.loads(result_file_entity['text'])
     result_file_resp = await rdm.put(f'{crate_folder_url}?kind=file&name={result_name}', json=result_file_json)
     result_file = result_file_resp['data']
-    result_entity.update({
+    result_file_entity.update({
         'size': result_file['attributes']['size'],
         'rdmURL': result_file['links']['download'],
         'name': result_name,
@@ -73,7 +73,7 @@ async def modify_crate(rdm: RDMService, id: str, crate_file_url: str, crate_fold
     candidates = ['sha1', 'sha256', 'sha512', 'md5']
     for candidate in candidates:
         if candidate in result_file['attributes']:
-            result_entity[candidate] = result_file['attributes'][candidate]
+            result_file_entity[candidate] = result_file['attributes'][candidate]
     entities.append(_create_log_entity(id, runner_log))
     await rdm.put(crate_file_url, json=crate_content)
     return _to_job_status(create_action_entity['actionStatus'])
