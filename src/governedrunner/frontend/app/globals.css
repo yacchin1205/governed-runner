@@ -27,3 +27,59 @@ body {
     rgb(var(--background-start-rgb));
   */
 }
+
+.gr-other-file {
+  color: #999;
+}
+
+.gr-no-notebook {
+  color: #999;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-20%, -50%);
+  font-size: 2em;
+}
+
+.gr-app-bar {
+  background: #e7e7e7;
+  color: #777;
+}
+
+.gr-tree-view {
+  margin: 1em;
+}
+
+.gr-tree-loading {
+  color: #ccc;
+}
+
+.gr-tree-loading-label {
+  margin-left: 0.2em;
+}
+
+.gr-toolbar-button {
+  margin-right: 1em;
+}
+
+.gr-toolbar-notebook-label {
+  flex-grow: 1;
+}
+
+.gr-job-status {
+  position: status;
+  width: calc(100vw - 300px);
+  height: calc(100vh - 200px);
+  overflow: scroll;
+  background-color: black;
+  color: white;
+  padding: 1em;
+}
+
+.gr-job-status-indicator {
+  font-weight: bold;
+}
+
+.gr-job-no-status {
+  color: #ccc;
+}

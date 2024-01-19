@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { TreeItem } from "@mui/x-tree-view/TreeItem";
+import { CircularProgress } from "@mui/material";
+import { Layers, Storage, Folder, Description } from "@mui/icons-material";
 
 import {
   Page,
@@ -19,12 +21,21 @@ interface Params {
   onClick: () => Promise<void>;
 }
 
+function Loading() {
+  return (
+    <span className="gr-tree-loading">
+      <CircularProgress size="16px" />
+      <span className="gr-tree-loading-label">Loading...</span>
+    </span>
+  );
+}
+
 export function TreeItemExpander({ nodeId, onClick }: Params) {
   const [expanding, setExpanding] = useState(false);
   return (
     <TreeItem
       nodeId={nodeId}
-      label={expanding ? "Loading..." : "More..."}
+      label={expanding ? <Loading /> : "More..."}
       onClick={() => {
         setExpanding(true);
         onClick().then(() => {
@@ -38,11 +49,13 @@ export interface TreeItemHandlersParam {
   onNodeClick?: (node: Node) => void;
   onProviderClick?: (provider: Provider) => void;
   onFileClick?: (file: File) => void;
+  onError?: (err: any) => void;
 }
 
 interface LazyTreeItemParam extends TreeItemHandlersParam {
   nodeId: string;
-  label: string;
+  icon?: React.ReactNode;
+  label: React.ReactNode;
   pagination?: Pagination | undefined;
   nodesLink?: Link | undefined;
   providersLink?: Link | undefined;
@@ -52,6 +65,7 @@ interface LazyTreeItemParam extends TreeItemHandlersParam {
 
 function LazyTreeItem({
   nodeId,
+  icon,
   label,
   pagination,
   nodesLink,
@@ -61,6 +75,7 @@ function LazyTreeItem({
   onNodeClick,
   onProviderClick,
   onFileClick,
+  onError,
 }: LazyTreeItemParam) {
   const [expanded, setExpanded] = useState(false);
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -90,45 +105,66 @@ function LazyTreeItem({
       providersPageQuery: string | null,
       filesPageQuery: string | null
     ) => {
-      if (nodesLink && nodesPageQuery !== null) {
-        const res: paths["/nodes/{node_id}/children/"]["get"]["responses"][200]["content"]["application/json"] =
-          await fetch(`${nodesLink.href}${nodesPageQuery}`, {
-            method: "GET",
-            credentials: "include",
-          }).then((res) => res.json());
-        setNodes(nodes.concat(res.items));
-        setNextNodesPage(res);
+      try {
+        if (nodesLink && nodesPageQuery !== null) {
+          const res: paths["/nodes/{node_id}/children/"]["get"]["responses"][200]["content"]["application/json"] =
+            await fetch(`${nodesLink.href}${nodesPageQuery}`, {
+              method: "GET",
+              credentials: "include",
+            }).then((res) => res.json());
+          setNodes(nodes.concat(res.items));
+          setNextNodesPage(res);
+        }
+        if (providersLink && providersPageQuery !== null) {
+          const res: paths["/nodes/{node_id}/providers/"]["get"]["responses"][200]["content"]["application/json"] =
+            await fetch(`${providersLink.href}${providersPageQuery}`, {
+              method: "GET",
+              credentials: "include",
+            }).then((res) => res.json());
+          setProviders(providers.concat(res.items));
+          setNextProvidersPage(res);
+        }
+        if (filesLink && filesPageQuery !== null) {
+          const res: paths["/nodes/{node_id}/providers/{provider_id}/{filepath}"]["get"]["responses"][200]["content"]["application/json"] =
+            await fetch(`${filesLink.href}${filesPageQuery}`, {
+              method: "GET",
+              credentials: "include",
+            }).then((res) => res.json());
+          setFiles(files.concat(res.items));
+          setNextFilesPage(res);
+        }
+        setExpanded(true);
+      } catch (error) {
+        console.error(error);
+        if (onError) {
+          onError(error);
+        }
       }
-      if (providersLink && providersPageQuery !== null) {
-        const res: paths["/nodes/{node_id}/providers/"]["get"]["responses"][200]["content"]["application/json"] =
-          await fetch(`${providersLink.href}${providersPageQuery}`, {
-            method: "GET",
-            credentials: "include",
-          }).then((res) => res.json());
-        setProviders(providers.concat(res.items));
-        setNextProvidersPage(res);
-      }
-      if (filesLink && filesPageQuery !== null) {
-        const res: paths["/nodes/{node_id}/providers/{provider_id}/{filepath}"]["get"]["responses"][200]["content"]["application/json"] =
-          await fetch(`${filesLink.href}${filesPageQuery}`, {
-            method: "GET",
-            credentials: "include",
-          }).then((res) => res.json());
-        setFiles(files.concat(res.items));
-        setNextFilesPage(res);
-      }
-      setExpanded(true);
     },
-    [nodesLink, providersLink, filesLink, nodes, providers, files]
+    [nodesLink, providersLink, filesLink, nodes, providers, files, onError]
   );
 
   if (!(nodesLink || providersLink || filesLink)) {
-    return <TreeItem nodeId={nodeId} label={label} onClick={onItemClick} />;
+    return (
+      <TreeItem
+        nodeId={nodeId}
+        label={
+          <>
+            {icon} {label}
+          </>
+        }
+        onClick={onItemClick}
+      />
+    );
   }
   return (
     <TreeItem
       nodeId={nodeId}
-      label={label}
+      label={
+        <>
+          {icon} {label}
+        </>
+      }
       onClick={() => {
         if (onItemClick) {
           onItemClick();
@@ -150,6 +186,7 @@ function LazyTreeItem({
           onNodeClick={onNodeClick}
           onProviderClick={onProviderClick}
           onFileClick={onFileClick}
+          onError={onError}
         />
       ))}
       {providers.map((provider) => (
@@ -160,6 +197,7 @@ function LazyTreeItem({
           onNodeClick={onNodeClick}
           onProviderClick={onProviderClick}
           onFileClick={onFileClick}
+          onError={onError}
         />
       ))}
       {files.map((file) => (
@@ -170,10 +208,11 @@ function LazyTreeItem({
           onNodeClick={onNodeClick}
           onProviderClick={onProviderClick}
           onFileClick={onFileClick}
+          onError={onError}
         />
       ))}
       {!expanded && (
-        <TreeItem nodeId={`${nodeId}-expand`} label={"Loading..."} />
+        <TreeItem nodeId={`${nodeId}-expand`} label={<Loading />} />
       )}
       {nextPageExists && (
         <TreeItemExpander
@@ -207,6 +246,7 @@ export function NodeTreeItem({
   onNodeClick,
   onProviderClick,
   onFileClick,
+  onError,
 }: NodeParams) {
   const nodesLink = useMemo(
     () => node.links.find((link) => link.rel === "children"),
@@ -220,6 +260,7 @@ export function NodeTreeItem({
   return (
     <LazyTreeItem
       nodeId={node.id}
+      icon={<Layers />}
       label={node.title}
       pagination={pagination}
       nodesLink={nodesLink}
@@ -233,6 +274,7 @@ export function NodeTreeItem({
         }
         onNodeClick(node);
       }}
+      onError={onError}
     />
   );
 }
@@ -248,6 +290,7 @@ export function ProviderTreeItem({
   onNodeClick,
   onProviderClick,
   onFileClick,
+  onError,
 }: ProviderParams) {
   const filesLink = useMemo(
     () => provider.links.find((link) => link.rel === "files"),
@@ -257,6 +300,7 @@ export function ProviderTreeItem({
   return (
     <LazyTreeItem
       nodeId={provider.id}
+      icon={<Storage />}
       label={provider.name}
       pagination={pagination}
       filesLink={filesLink}
@@ -269,6 +313,7 @@ export function ProviderTreeItem({
         }
         onProviderClick(provider);
       }}
+      onError={onError}
     />
   );
 }
@@ -284,6 +329,7 @@ export function FileTreeItem({
   onNodeClick,
   onProviderClick,
   onFileClick,
+  onError,
 }: FileParams) {
   const filesLink = useMemo(
     () => file.links.find((link) => link.rel === "files"),
@@ -293,7 +339,14 @@ export function FileTreeItem({
   return (
     <LazyTreeItem
       nodeId={file.id}
-      label={file.name}
+      icon={file.kind === "folder" ? <Folder /> : <Description />}
+      label={
+        file.kind === "file" && !file.name.match(/.+\.ipynb$/i) ? (
+          <span className="gr-other-file">{file.name}</span>
+        ) : (
+          file.name
+        )
+      }
       pagination={pagination}
       filesLink={filesLink}
       onNodeClick={onNodeClick}
@@ -305,6 +358,7 @@ export function FileTreeItem({
         }
         onFileClick(file);
       }}
+      onError={onError}
     />
   );
 }

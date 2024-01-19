@@ -17,6 +17,7 @@ export function NotebookList({
   onNodeClick,
   onProviderClick,
   onFileClick,
+  onError,
 }: Param) {
   const pagination: Pagination | undefined = useMemo(
     () =>
@@ -29,16 +30,20 @@ export function NotebookList({
   );
   const [nodes, setNodes] = useState<Node[]>([]);
   const [page, setPage] = useState<Page | undefined>(undefined);
+  const [loading, setLoading] = useState(false);
   useEffect(() => {
+    setLoading(true);
     getNodes(pagination).then((data) => {
       setNodes(data.items);
       setPage(data);
+      setLoading(false);
     });
   }, [pagination]);
   return (
     nodes && (
       <TreeView
         aria-label="file system navigator"
+        className="gr-tree-view"
         defaultCollapseIcon={<ExpandMoreIcon />}
         defaultExpandIcon={<ChevronRightIcon />}
         sx={{ height: 240, flexGrow: 1, maxWidth: 400, overflowY: "auto" }}
@@ -51,19 +56,30 @@ export function NotebookList({
             onNodeClick={onNodeClick}
             onProviderClick={onProviderClick}
             onFileClick={onFileClick}
+            onError={onError}
           />
         ))}
         {page && page.page && page.pages && page.page < page.pages && (
           <TreeItemExpander
             nodeId="root-expand"
             onClick={async () => {
-              if (!page.page || !page.size) {
-                throw new Error("page or size is undefined");
+              try {
+                if (!page.page || !page.size) {
+                  throw new Error("page or size is undefined");
+                }
+                const nextPage = page.page + 1;
+                const data = await getNodes({
+                  page: nextPage,
+                  size: page.size,
+                });
+                setNodes(nodes.concat(data.items));
+                setPage(data);
+              } catch (error) {
+                console.error(error);
+                if (onError) {
+                  onError(error);
+                }
               }
-              const nextPage = page.page + 1;
-              const data = await getNodes({ page: nextPage, size: page.size });
-              setNodes(nodes.concat(data.items));
-              setPage(data);
             }}
           />
         )}

@@ -22,6 +22,8 @@ class ContainerTracker(ProcessTracker):
                 if log_stream_callback is None:
                     continue
                 log_stream_callback('running', log)
+            container = await docker.containers.get(self.container)
+            return container._container['State']['ExitCode']
 
 class DockerTracker(JobTracker):
     async def track_process(self, spawner: Spawner, hostname: str, port: int) -> ProcessTracker:

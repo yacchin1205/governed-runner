@@ -1,6 +1,7 @@
+from asyncio import Queue, QueueFull, QueueEmpty
 from datetime import datetime, timezone
 import logging
-from asyncio import Queue, QueueFull, QueueEmpty
+import traceback
 
 from governedrunner.db.database import SessionLocal
 from governedrunner.db.models import Job
@@ -14,6 +15,9 @@ logger = logging.getLogger(__name__)
 settings = Settings()
 log_streams = {}
 
+
+def _append_log(job, log):
+    job.log = (job.log if job.log is not None else '') + log
 
 def create_new_job_queue(job_id: str):
     log_streams[job_id] = Queue(maxsize=100)
@@ -50,10 +54,7 @@ async def create_new_job(job_id: str):
                     q.put_nowait((status, log))
                 except QueueFull:
                     logger.warning(f'Queue is full: LOG({status}, {job.id}): {log_}')
-            if job.log is None:
-                job.log = log
-            else:
-                job.log = job.log + log
+            _append_log(job, log)
             db.commit()
         current_user = job.owner
         rdm = RDMService(current_user)
@@ -70,9 +71,14 @@ async def create_new_job(job_id: str):
             job.updated_at = datetime.now(timezone.utc)
             db.commit()
             logger.info('Executed')
-            remove_job_queue(job.id)
         except:
             job.status = 'failed'
             job.updated_at = datetime.now(timezone.utc)
+            _append_log(job, traceback.format_exc())
             db.commit()
+            q = get_job_queue(job.id)
+            if q is not None:
+                q.put_nowait(('failed', traceback.format_exc()))
             logger.exception('Failed')
+        finally:
+            remove_job_queue(job.id)

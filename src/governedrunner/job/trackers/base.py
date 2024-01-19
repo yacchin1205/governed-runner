@@ -7,6 +7,12 @@ class ProcessTracker:
     async def wait(self, log_stream_callback: Callable[[str, str], None]):
         """
         Wait for the process to finish.
+
+        Args:
+            log_stream_callback: The callback function to call when log is emitted
+
+        Returns:
+            The exit code of the process
         """
         raise NotImplementedError()
 

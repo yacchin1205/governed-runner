@@ -1,5 +1,4 @@
 import React, { useCallback, useState } from "react";
-import { Box } from "@mui/material";
 
 import { endpoint, Link } from "../api/types";
 
@@ -30,6 +29,10 @@ export function JobStatus({ job }: Params) {
       const data = JSON.parse(event.data);
       if (data.status) {
         setStatus(data.status);
+      }
+      if (data.log === undefined) {
+        setLogs(undefined);
+        return;
       }
       if (!logs) {
         setLogs([data.log]);
@@ -65,13 +68,21 @@ export function JobStatus({ job }: Params) {
   }, [status, job, logs, onMessage]);
 
   return (
-    <Box>
-      <div>Status: {status}</div>
-      <div>Created: {job.created_at}</div>
-      <div>Logs:</div>
+    <div>
       <div>
-        <pre>{logs?.join("")}</pre>
+        Status: <span className="gr-job-status-indicator">{status}</span>
       </div>
-    </Box>
+      <div>
+        Created:{" "}
+        <span className="gr-job-status-indicator">{job.created_at}</span>
+      </div>
+      <div>Logs:</div>
+      {logs === undefined && <div className="gr-job-no-status">No logs</div>}
+      {logs !== undefined && (
+        <div className="gr-job-status">
+          <pre>{logs?.join("")}</pre>
+        </div>
+      )}
+    </div>
   );
 }

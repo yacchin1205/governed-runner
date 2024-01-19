@@ -1,18 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { AppBar, Box, Toolbar, Button } from "@mui/material";
+import { AppBar, Box, Toolbar, Button, CircularProgress } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { PlayArrow } from "@mui/icons-material";
 
 import { DataGrid } from "@mui/x-data-grid";
 import { getCrates, getJobs } from "../api/crates";
 import { createNotebookJob, createRunCrateJob } from "../api/jobs";
-import { Pagination, File } from "../api/types";
+import { Pagination, File, endpoint } from "../api/types";
 import { Job, JobStatus } from "./job";
 
 interface Param {
   defaultPageSize?: number | undefined;
   selectedFile?: File | undefined;
+  onError: (err: any) => void;
 }
 
 interface RDMRef {
@@ -67,15 +68,27 @@ async function getAllJobs(
     .reverse();
 }
 
-async function getCrate(crate: Job): Promise<string | null> {
-  const crateLink = crate.links?.find((link) => link.rel === "download");
-  const resp = await fetch(crateLink?.href as string);
+async function getCrate(crate: Job): Promise<any> {
+  const wbLink = crate.links?.find((link) => link.rel === "download");
+  if (!wbLink) {
+    throw new Error("No download link");
+  }
+  const wbMatch = wbLink.href.match(/.+\/resources\/(.+)\/providers\/(.+)/);
+  if (!wbMatch) {
+    throw new Error(`Invalid download link: ${wbLink.href}`);
+  }
+  const crateLink = `${endpoint}/nodes/${wbMatch[1]}/providers/${wbMatch[2]}?action=download`;
+  const resp = await fetch(crateLink);
   const data = await resp.json();
-  return "completed";
+  if (data.items.length === 0) {
+    throw new Error(`Load failed: ${crateLink}`);
+  }
+  return data.items[0].content;
 }
 
-export function CrateList({ defaultPageSize, selectedFile }: Param) {
+export function CrateList({ defaultPageSize, selectedFile, onError }: Param) {
   const [crates, setCrates] = useState<Job[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
   const [loadedFile, setLoadedFile] = useState<File | undefined>();
   const [requestedCrate, setRequestedCrate] = useState<Job | undefined>();
   const [selectedJob, setSelectedJob] = useState<Job | null>(null);
@@ -100,7 +113,7 @@ export function CrateList({ defaultPageSize, selectedFile }: Param) {
 
   useEffect(() => {
     const newCrates = crates.filter(
-      (crate) => crate.status === undefined && crate.links !== undefined
+      (crate) => crate.log === undefined && crate.links !== undefined
     );
     if (newCrates.length === 0) {
       return;
@@ -111,21 +124,42 @@ export function CrateList({ defaultPageSize, selectedFile }: Param) {
     }
     setRequestedCrate(crate);
     setTimeout(() => {
-      getCrate(crate).then((status) => {
-        setCrates(
-          crates.map((c) => {
-            if (c.id !== crate.id) {
-              return c;
-            }
-            return Object.assign({}, c, {
-              status,
-            });
-          })
-        );
-        setRequestedCrate(undefined);
-      });
+      getCrate(crate)
+        .then((content) => {
+          if (!content) {
+            setRequestedCrate(undefined);
+            return;
+          }
+          console.log("CRATE", content);
+          const entities = content["@graph"].filter(
+            (e: any) =>
+              e["@type"] === "File" && e["@id"].match(/^runner-.+\.log$/)
+          );
+          if (entities.length === 0) {
+            setRequestedCrate(undefined);
+            return;
+          }
+          setCrates(
+            crates.map((c) => {
+              if (c.id !== crate.id) {
+                return c;
+              }
+              return Object.assign({}, c, {
+                log: entities[0]["text"],
+              });
+            })
+          );
+          setRequestedCrate(undefined);
+        })
+        .catch((err) => {
+          console.log(err);
+          if (onError) {
+            onError(err);
+          }
+          setRequestedCrate(undefined);
+        });
     }, STATUS_INTERVAL);
-  }, [crates, requestedCrate]);
+  }, [crates, requestedCrate, onError]);
 
   useEffect(() => {
     // If the extension is .ipynb, get the execution result from RDM
@@ -136,11 +170,21 @@ export function CrateList({ defaultPageSize, selectedFile }: Param) {
       return;
     }
     setCrates([]);
-    getAllJobs(selectedFile, pagination).then((data) => {
-      setLoadedFile(selectedFile);
-      setCrates(data);
-    });
-  }, [selectedFile, loadedFile, pagination]);
+    setLoading(true);
+    getAllJobs(selectedFile, pagination)
+      .then((data) => {
+        setLoadedFile(selectedFile);
+        setCrates(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error(err);
+        if (onError) {
+          onError(err);
+        }
+        setLoading(false);
+      });
+  }, [selectedFile, loadedFile, pagination, onError]);
 
   const createJob = useCallback(async () => {
     if (!selectedFile) {
@@ -162,10 +206,16 @@ export function CrateList({ defaultPageSize, selectedFile }: Param) {
   }, []);
 
   return (
-    <Box sx={{ flexGrow: 1, height: "calc(100vh - 64px)", minWidth: "80vw" }}>
+    <Box
+      sx={{
+        flexGrow: 1,
+        height: "calc(100vh - 64px)",
+        width: "calc(100vw - 300px)",
+      }}
+    >
       <AppBar position="static" color="default">
         <Toolbar>
-          <div>
+          <div className="gr-toolbar-notebook-label">
             {selectedJob ? (
               <a onClick={() => setSelectedJob(null)}>{notebookName}</a>
             ) : (
@@ -173,15 +223,6 @@ export function CrateList({ defaultPageSize, selectedFile }: Param) {
             )}
             {selectedJob && <span> &gt; Job {selectedJob.id}</span>}
           </div>
-          <Button
-            color="inherit"
-            startIcon={<RefreshIcon />}
-            onClick={() => {
-              setLoadedFile(undefined);
-            }}
-          >
-            Reload
-          </Button>
           {!selectedJob && (
             <Button
               color="inherit"
@@ -191,10 +232,31 @@ export function CrateList({ defaultPageSize, selectedFile }: Param) {
               Run
             </Button>
           )}
+          <Button
+            color="inherit"
+            startIcon={<RefreshIcon />}
+            onClick={() => {
+              setLoadedFile(undefined);
+            }}
+          >
+            Reload
+          </Button>
         </Toolbar>
       </AppBar>
       {selectedJob && <JobStatus job={selectedJob} />}
-      {!selectedJob && (
+      {crates.length === 0 && loading && (
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "100%",
+          }}
+        >
+          <CircularProgress />
+        </Box>
+      )}
+      {!selectedJob && (crates.length > 0 || loading === false) && (
         <DataGrid
           rows={crates}
           onRowClick={(params) => {

@@ -89,6 +89,12 @@ class GovernedRunner(Application):
     async def execute(self, job: Job, rdm: RDMService, source_url: str) -> RunnerResult:
         from ..api.settings import CRATE_FOLDER_NAME
         self.log.info(f'Starting... {source_url}')
+        log = ''
+        def log_stream_callback_impl(status, log_):
+            nonlocal log
+            log += log_
+            if self.log_stream_callback is not None:
+                self.log_stream_callback(status, log_)
 
         # Build image
         notebook_filename, repo_url = await extract_repo_info(rdm, source_url)
@@ -108,7 +114,7 @@ class GovernedRunner(Application):
         builder.optional_labels = optional_labels
         if self.use_snapshot:
             _, repo_url = await extract_repo_info(rdm, extract_rdm_url(source_url))
-        builder.log_stream_callback = self.log_stream_callback
+        builder.log_stream_callback = log_stream_callback_impl
         self.log.info(f'Building image... {repo_url}')
         image = await builder.build(repo_url)
         self.log.info(f'Built image: {image}')
@@ -116,8 +122,7 @@ class GovernedRunner(Application):
         # Run container
         if self.status_callback is not None:
             self.status_callback(job.id, 'running', notebook_filename)
-        if self.log_stream_callback is not None:
-            self.log_stream_callback('running', f'Running {notebook_filename}...')
+        log_stream_callback_impl('running', f'Running {notebook_filename}...\n')
         spawner = new_instance(self.spawner_class, self)
         tracker = new_instance(self.tracker_class, self)
         configure_spawner(job, spawner)
@@ -145,13 +150,13 @@ class GovernedRunner(Application):
         self.log.info(f'Started container: {host}:{port}')
         process = await tracker.track_process(spawner, host, port)
         self.log.debug(f'Waiting for process to finish...')
-        if self.log_stream_callback is not None:
-            self.log_stream_callback('running', f'Waiting for {notebook_filename} to finish...')
-        await process.wait(self.log_stream_callback)
-        self.log.info(f'Process finished')
+        log_stream_callback_impl('running', f'Waiting for {notebook_filename} to finish...\n')
+        exit_code = await process.wait(log_stream_callback_impl)
+        self.log.info(f'Process finished: exit_code={exit_code}')
         await spawner.stop()
-        if self.log_stream_callback is not None:
-            self.log_stream_callback('running', f'Collecting results...')
+        log_stream_callback_impl('running', f'Collecting results...\n')
+        if exit_code != 0:
+            raise RuntimeError(f'Process failed: exit_code={exit_code}')
 
         # Get result
         self.log.info(f'Getting result... {result_filename} from {crate_folder_url}')
@@ -160,7 +165,7 @@ class GovernedRunner(Application):
             raise ValueError(f'Cannot find result file: {result_filename} in {CRATE_FOLDER_NAME} folder')
         url = result['links']['download']
         self.log.info(f'Modifying crates... {url}')
-        status = await modify_crate(rdm, url, crate_folder_url)
+        status = await modify_crate(rdm, job.id, url, crate_folder_url, log)
         self.log.info(f'Inserting index... {crate_folder_url}')
         await insert_index(rdm, crate_folder_url, RunCrateIndex(
             notebook=notebook_filename,
@@ -175,6 +180,5 @@ class GovernedRunner(Application):
             ],
         ))
         self.log.info(f'WaterButler result URL: {url}')
-        if self.log_stream_callback is not None:
-            self.log_stream_callback(status, f'Finished: {CRATE_FOLDER_NAME}/{result_filename}')
+        log_stream_callback_impl(status, f'Finished: {CRATE_FOLDER_NAME}/{result_filename}\n')
         return RunnerResult(notebook=notebook_filename, result_url=url, status=status)

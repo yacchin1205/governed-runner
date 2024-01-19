@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import json
 
 from ..api.rdm import RDMService
@@ -29,7 +30,21 @@ def _to_job_status(status: str):
         return 'failed'
     raise ValueError(f'Unexpected status: {status}')
 
-async def modify_crate(rdm: RDMService, crate_file_url: str, crate_folder_url: str):
+def _create_log_entity(id: str, log: str):
+    now = datetime.now(timezone.utc)
+    return {
+        '@type': 'File',
+        '@id': f"runner-{id}.log",
+        '@type': 'File',
+        'dateModified': now.isoformat(),
+        'text': log,
+        'lineCount': len(log.splitlines()),
+        'contentSize': len(log),
+        'encodingFormat': 'text/plain',
+        'name': 'Runner log',
+    }
+
+async def modify_crate(rdm: RDMService, id: str, crate_file_url: str, crate_folder_url: str, runner_log: str):
     crate_content = await rdm.get(crate_file_url)
     entities = crate_content['@graph']
     create_action_entities = [entity for entity in entities if entity['@type'] == 'CreateAction']
@@ -59,6 +74,7 @@ async def modify_crate(rdm: RDMService, crate_file_url: str, crate_folder_url: s
     for candidate in candidates:
         if candidate in result_file['attributes']:
             result_entity[candidate] = result_file['attributes'][candidate]
+    entities.append(_create_log_entity(id, runner_log))
     await rdm.put(crate_file_url, json=crate_content)
     return _to_job_status(create_action_entity['actionStatus'])
 

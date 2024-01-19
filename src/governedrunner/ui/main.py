@@ -64,6 +64,8 @@ async def homepage(request):
         updated = _update_rdm_token(user, request, db)
         if updated:
             return RedirectResponse(url=request.url_for('homepage'))
+        if user.rdm_token is None:
+            raise HTTPException(status_code=403, detail="RDM token not defined")
         return FileResponse(
             path=f'{build_path}/index.html',
             media_type='text/html',
