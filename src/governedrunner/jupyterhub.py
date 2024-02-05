@@ -12,6 +12,9 @@ def tljh_custom_jupyterhub_config(c):
     url = os.environ.get('TLJH_BASE_URL', 'http://localhost')
     if url.endswith('/'):
         url = url[:-1]
+    local_api_url = os.environ.get('TLJH_LOCAL_API_URL', 'http://localhost/hub/api')
+    if local_api_url.endswith('/'):
+        local_api_url = local_api_url[:-1]
     c.JupyterHub.services.append({
         'name': service_name,
         'admin': False,
@@ -27,9 +30,9 @@ def tljh_custom_jupyterhub_config(c):
             'GOVERNEDRUNNER_BASE_PATH': f'/services/{service_name}',
             'OAUTH2_CLIENT_ID': service_id,
             'OAUTH2_CLIENT_SECRET': client_secret,
-            'OAUTH2_TOKEN_URL': 'http://localhost/hub/api/oauth2/token',
+            'OAUTH2_TOKEN_URL': f'{local_api_url}/oauth2/token',
             'OAUTH2_AUTHORIZATION_URL': f'{url}/hub/api/oauth2/authorize',
-            'USER_PROFILE_URL': 'http://localhost/hub/api/user',
+            'USER_PROFILE_URL': f'{local_api_url}/user',
             'USER_PROFILE_PROPNAME': 'name',
             'DEBUG': os.environ.get('DEBUG', ''),
         },

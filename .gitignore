@@ -161,3 +161,7 @@ cython_debug/
 
 gr.db
 .DS_Store
+
+# Files generated on test run
+.next.*
+gr.db.*
