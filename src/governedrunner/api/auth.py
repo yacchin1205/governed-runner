@@ -27,7 +27,7 @@ async def _get_username_from_token(token: str):
         })
         logger.debug(f'Userinfo Response: {user_info}')
         if not user_info.is_success:
-            logger.error('Failed to retrieve user information, token revoked')
+            logger.error('Failed to retrieve user information')
             raise HTTPException(status_code=401)
         logger.debug(f'Userinfo Content: {user_info.json()}')
         return user_info.json()[settings.user_profile_propname]

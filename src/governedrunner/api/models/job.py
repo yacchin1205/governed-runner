@@ -3,10 +3,10 @@ from enum import Enum
 from typing import Optional
 from pydantic import BaseModel, Field, root_validator
 from pydantic.utils import GetterDict
-from starlette.config import Config
+
+from governedrunner.config import config
 
 
-config = Config('.env')
 PREFIX = config('GOVERNEDRUNNER_BASE_PATH', cast=str, default='')
 
 

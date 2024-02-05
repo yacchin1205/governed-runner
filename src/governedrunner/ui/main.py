@@ -3,20 +3,19 @@ import os
 import subprocess
 
 from starlette.applications import Starlette
-from starlette.config import Config
 from starlette.exceptions import HTTPException
 from starlette.responses import FileResponse, RedirectResponse
 from starlette.routing import Route, Mount
 from starlette.staticfiles import StaticFiles
 from starlette.routing import WebSocketRoute
 
+from governedrunner.config import config
 from governedrunner.api.tasks.job import get_job_queue
 from governedrunner.db.database import SessionLocal
 from governedrunner.db.models import RDMToken
 from . import auth
 from .routes import routes
 
-config = Config('.env')
 FORCE_BUILD_FRONTEND = config('FORCE_BUILD_FRONTEND', cast=bool, default=False)
 
 def _ensure_frontend():

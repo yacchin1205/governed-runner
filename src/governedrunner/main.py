@@ -1,13 +1,12 @@
 import logging
 import os
 from starlette.applications import Starlette
-from starlette.config import Config
 from starlette.middleware.sessions import SessionMiddleware
 
+from .config import config
 from .api.main import app as api_v1_app
 from .ui.main import app as ui_app
 
-config = Config('.env')
 SECRET_KEY = config('SESSION_SECRET_KEY', cast=str, default='')
 PREFIX = config('GOVERNEDRUNNER_BASE_PATH', cast=str, default='')
 

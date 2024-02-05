@@ -4,15 +4,14 @@ import time
 
 import httpx
 from starlette.responses import RedirectResponse
-from starlette.config import Config
 
 from authlib.integrations.starlette_client import OAuth
+from governedrunner.config import config
 from governedrunner.api.demo import USERNAME as DEMO_USERNAME
 from governedrunner.db.models import User
 
 logger = logging.getLogger(__name__)
 
-config = Config('.env')
 oauth = OAuth(config)
 DEMO_USER = config('DEMO_USER', cast=bool, default=False)
 CLIENT_ID = config('OAUTH2_CLIENT_ID', cast=str, default='')
