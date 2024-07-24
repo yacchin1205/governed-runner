@@ -15,3 +15,12 @@ def retrieve_server():
     return {
         'version': __version__,
     }
+
+@router.get('/health', response_model=ServerOut)
+def health_check():
+    '''
+    このGoverned Runnerのヘルスチェック用エンドポイントです。
+    '''
+    return {
+        'version': __version__,
+    }
