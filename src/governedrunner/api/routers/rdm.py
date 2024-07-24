@@ -21,6 +21,7 @@ from governedrunner.api.rdm import RDMService
 from governedrunner.api.auth import get_current_user
 from governedrunner.api.models import NodeOut, ProviderOut, FileOut
 from governedrunner.db.models import User
+from .util import get_frontend_base_url, get_frontend_url
 
 
 logger = logging.getLogger(__name__)
@@ -45,10 +46,11 @@ def _get_provider_path(provdier):
 
 def _create_links(request: Request, rdm: RDMService, requested_path: str, file: Any):
     links = []
+    base_url = get_frontend_base_url(request)
     if file['id'].endswith('/'):
         links.append({
             'rel': 'files',
-            'href': f'{request.url.scheme}://{request.url.netloc}{requested_path}{file["id"]}',
+            'href': f'{base_url}{requested_path}{file["id"]}',
         })
         links.append({
             'rel': 'web',
@@ -57,11 +59,11 @@ def _create_links(request: Request, rdm: RDMService, requested_path: str, file: 
     else:
         links.append({
             'rel': 'download',
-            'href': f'{request.url.scheme}://{request.url.netloc}{requested_path}{file["id"]}?action={FileAction.download}',
+            'href': f'{base_url}{requested_path}{file["id"]}?action={FileAction.download}',
         })
         links.append({
             'rel': 'meta',
-            'href': f'{request.url.scheme}://{request.url.netloc}{requested_path}{file["id"]}?action={FileAction.meta}',
+            'href': f'{base_url}{requested_path}{file["id"]}?action={FileAction.meta}',
         })
         links.append({
             'rel': 'web',
@@ -69,7 +71,7 @@ def _create_links(request: Request, rdm: RDMService, requested_path: str, file: 
         })
     links.append({
         'rel': 'parent',
-        'href': str(request.url),
+        'href': str(get_frontend_url(request)),
     })
     return links
 
@@ -123,6 +125,7 @@ async def retrieve_nodes(
     request: Request,
     rdm: RDMService = Depends(get_rdm_service),
 ):
+    base_url = get_frontend_base_url(request)
     '''
     現在のユーザーが参照可能なGakuNin RDMノードを取得します。
     '''
@@ -136,11 +139,11 @@ async def retrieve_nodes(
             links=[
                 {
                     'rel': 'providers',
-                    'href': f'{request.url.scheme}://{request.url.netloc}{request.url.path}{node["id"]}/providers/',
+                    'href': f'{base_url}{request.url.path}{node["id"]}/providers/',
                 },
                 {
                     'rel': 'children',
-                    'href': f'{request.url.scheme}://{request.url.netloc}{request.url.path}{node["id"]}/children/',
+                    'href': f'{base_url}{request.url.path}{node["id"]}/children/',
                 },
             ],
             data=node,
@@ -153,6 +156,7 @@ async def retrieve_node_providers(
     request: Request,
     rdm: RDMService = Depends(get_rdm_service),
 ):
+    base_url = get_frontend_base_url(request)
     '''
     指定されたGakuNin RDMノードに紐づくストレージプロバイダを取得します。
     '''
@@ -167,11 +171,11 @@ async def retrieve_node_providers(
             links=[
                 {
                     'rel': 'files',
-                    'href': f'{request.url.scheme}://{request.url.netloc}{request.url.path}{_get_provider_path(provider)}',
+                    'href': f'{base_url}{request.url.path}{_get_provider_path(provider)}',
                 },
                 {
                     'rel': 'parent',
-                    'href': str(request.url),
+                    'href': str(get_frontend_url(request)),
                 }
             ],
             data=provider,
@@ -184,6 +188,7 @@ async def retrieve_node_children(
     request: Request,
     rdm: RDMService = Depends(get_rdm_service),
 ):
+    base_url = get_frontend_base_url(request)
     '''
     指定されたGakuNin RDMノードの子ノードを取得します。
     '''
@@ -197,15 +202,15 @@ async def retrieve_node_children(
             links=[
                 {
                     'rel': 'providers',
-                    'href': f'{request.url.scheme}://{request.url.netloc}{request.url.path}{node["id"]}/providers/',
+                    'href': f'{base_url}{request.url.path}{node["id"]}/providers/',
                 },
                 {
                     'rel': 'children',
-                    'href': f'{request.url.scheme}://{request.url.netloc}{request.url.path}{node["id"]}/children/',
+                    'href': f'{base_url}{request.url.path}{node["id"]}/children/',
                 },
                 {
                     'rel': 'parent',
-                    'href': str(request.url),
+                    'href': str(get_frontend_url(request)),
                 },
             ],
             data=node,

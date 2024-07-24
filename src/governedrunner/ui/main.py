@@ -14,6 +14,7 @@ from governedrunner.api.tasks.job import get_job_queue
 from governedrunner.db.database import SessionLocal
 from governedrunner.db.models import RDMToken
 from . import auth
+from .util import frontend_url_for
 from .routes import routes
 
 FORCE_BUILD_FRONTEND = config('FORCE_BUILD_FRONTEND', cast=bool, default=False)
@@ -63,10 +64,10 @@ async def homepage(request):
     try:
         user = await auth.get_user(request, db)
         if user is None:
-            return RedirectResponse(url=request.url_for('login'))
+            return RedirectResponse(url=frontend_url_for(request, 'login'))
         updated = _update_rdm_token(user, request, db)
         if updated:
-            return RedirectResponse(url=request.url_for('homepage'))
+            return RedirectResponse(url=frontend_url_for(request, 'homepage'))
         if user.rdm_token is None:
             raise HTTPException(status_code=403, detail="RDM token not defined")
         return FileResponse(

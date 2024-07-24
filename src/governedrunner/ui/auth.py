@@ -9,6 +9,7 @@ from authlib.integrations.starlette_client import OAuth
 from governedrunner.config import config
 from governedrunner.api.demo import USERNAME as DEMO_USERNAME
 from governedrunner.db.models import User
+from .util import frontend_url_for
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ async def get_user(request, db):
     return u
 
 async def login(request):
-    redirect_uri = request.url_for('auth')
+    redirect_uri = frontend_url_for(request, 'auth')
     return await service.authorize_redirect(request, redirect_uri)
 
 async def auth(request):
@@ -90,4 +91,4 @@ async def auth(request):
     request.session['token'] = token
     logger.debug(f'Retrieved token: {token.keys()}')
     await get_username(request)
-    return RedirectResponse(url=request.url_for('homepage'))
+    return RedirectResponse(url=frontend_url_for(request, 'homepage'))
