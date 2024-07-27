@@ -1,9 +1,6 @@
-import logging
 import re
-from urllib.parse import urlparse
 
 from aiodocker import Docker
-from traitlets import Unicode, Dict, List, Callable
 
 from .base import ImageBuilder
 
@@ -11,30 +8,6 @@ from .base import ImageBuilder
 class DockerImageBuilder(ImageBuilder):
     """Builds a docker image from specified repository.
     """
-
-    repo2docker_image = Unicode(
-        "quay.io/jupyterhub/repo2docker:main",
-        help="""The repo2docker image to use for building.
-        """,
-    ).tag(config=True)
-
-    optional_envs = Dict(
-        {},
-        help="""Optional environment variables to pass to the builder.
-        """,
-    ).tag(config=True)
-
-    extra_buildargs = List(
-        [],
-        help="""Extra build arguments to pass to the builder.
-        """,
-    ).tag(config=True)
-
-    log_stream_callback = Callable(
-        None,
-        help="""Callback function to call when log is emitted.
-        """,
-    ).tag(config=True)
 
     async def build(self, source_url: str) -> str:
         ref = 'HEAD'
