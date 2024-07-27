@@ -5,7 +5,6 @@ from urllib.parse import urlparse
 from aiodocker import Docker
 from traitlets import Unicode, Dict, List, Callable
 
-from governedrunner.api.rdm import RDMService
 from .base import ImageBuilder
 
 
@@ -109,7 +108,7 @@ class DockerImageBuilder(ImageBuilder):
                 m = reuse_pattern.match(log)
                 if m:
                     image = m.group(1)
-                    self.log.info(f'Resusing detected: {image}')
+                    self.log.info(f'Reusing detected: {image}')
                 m = finished_pattern.match(log)
                 if m:
                     image = m.group(1)               

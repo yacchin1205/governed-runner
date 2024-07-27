@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     rdm_web_url: str = 'https://rdm.nii.ac.jp'
     rdm_api_url: str = 'https://api.rdm.nii.ac.jp/v2'
     rdm_files_url: str = 'https://files.rdm.nii.ac.jp/v1'
+    rdm_accounts_url: str = 'https://accounts.rdm.nii.ac.jp'
+    rdm_client_id: Optional[str] = None
+    rdm_client_secret: Optional[str] = None
     jupyterhub_config: Optional[str] = None
     user_profile_url: Optional[str] = None
     user_profile_propname: Optional[str] = None

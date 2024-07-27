@@ -1,4 +1,3 @@
-from datetime import datetime, timezone
 import os
 import subprocess
 
@@ -12,10 +11,11 @@ from starlette.routing import WebSocketRoute
 from governedrunner.config import config
 from governedrunner.api.tasks.job import get_job_queue
 from governedrunner.db.database import SessionLocal
-from governedrunner.db.models import RDMToken
+from governedrunner.db.models import User
 from . import auth
 from .util import frontend_url_for
 from .routes import routes
+from .rdm import update_rdm_token
 
 FORCE_BUILD_FRONTEND = config('FORCE_BUILD_FRONTEND', cast=bool, default=False)
 
@@ -36,27 +36,14 @@ def _ensure_frontend():
     )
     return build_path
 
-def _update_rdm_token(user, request, db):
+def _update_rdm_token(user: User, request, db):
     token = request.query_params.get('token', None)
     if token is None:
         return False
     service = request.query_params.get('service', None)
     if service is None:
         raise HTTPException(status_code=400)
-    if user.rdm_token is not None:
-        db.delete(user.rdm_token)
-        db.commit()
-        db.refresh(user)
-    rdm_token = RDMToken(
-        owner=user,
-        token=token,
-        created_at=datetime.now(timezone.utc),
-        expired_at=None,
-        service_id=service,
-    )
-    db.add(rdm_token)
-    user.updated_at = datetime.now(timezone.utc)
-    db.commit()
+    update_rdm_token(user, token, service, db)
     return True
 
 async def homepage(request):
@@ -69,7 +56,7 @@ async def homepage(request):
         if updated:
             return RedirectResponse(url=frontend_url_for(request, 'homepage'))
         if user.rdm_token is None:
-            raise HTTPException(status_code=403, detail="RDM token not defined")
+            return RedirectResponse(url=frontend_url_for(request, 'rdm_authorize'))
         return FileResponse(
             path=f'{build_path}/index.html',
             media_type='text/html',
