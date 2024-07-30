@@ -1,3 +1,5 @@
+from typing import Any
+
 from collections.abc import Callable
 from traitlets.config import LoggingConfigurable
 from jupyterhub.spawner import Spawner
@@ -18,14 +20,13 @@ class ProcessTracker:
 
 
 class JobTracker(LoggingConfigurable):
-    async def track_process(self, spawner: Spawner, hostname: str, port: int) -> ProcessTracker:
+    async def track_process(self, spawner: Spawner, spawner_response: Any) -> ProcessTracker:
         """
         Get a tracker for the given spawner.
 
         Args:
             spawner: The spawner
-            hostname: The hostname of the process
-            port: The port of the process
+            spawner_response: The response object by spawner.start
 
         Returns:
             The tracker

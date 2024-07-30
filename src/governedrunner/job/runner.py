@@ -14,11 +14,11 @@ from .wb import (
 from .builders import ImageBuilder, DockerImageBuilder
 from .trackers import JobTracker, DockerTracker
 from .spawners import Repo2DockerSpawner
-from .spawner import configure_spawner
+from .spawner import get_spawner_kwargs
 
 
-def new_instance(klass, app):
-    return klass(parent=app)
+def new_instance(klass, app, **kwargs):
+    return klass(parent=app, **kwargs)
 
 class RunnerResult:
     status: str = None
@@ -106,9 +106,10 @@ class GovernedRunner(Application):
             builder.optional_envs = {
                 'RDM_HOSTS_JSON': rdm.repo2docker_hosts_json,
             }
+        rdm_node_id = extract_rdm_node_id(source_url)
         optional_labels.update({
             'provider': get_target_provider(rdm, source_url),
-            'user.rdm_node_id': extract_rdm_node_id(source_url),
+            'user.rdm_node_id': rdm_node_id,
             'user.rdm_api_url': rdm.api_url,
         })
         builder.optional_labels = optional_labels
@@ -123,13 +124,14 @@ class GovernedRunner(Application):
         if self.status_callback is not None:
             self.status_callback(job.id, 'running', notebook_filename)
         log_stream_callback_impl('running', f'Running {notebook_filename}...\n')
-        spawner = new_instance(self.spawner_class, self)
+        spawner = new_instance(self.spawner_class, self, **get_spawner_kwargs(job))
         tracker = new_instance(self.tracker_class, self)
-        configure_spawner(job, spawner)
         spawner.image = image
-        spawner.user_options = {
+        user_options = {
             'image': image,
+            'repo_url': repo_url,
         }
+        spawner.user_options = user_options
         result_filename = f'{job.id}.json'
         rdm_url = extract_rdm_url(source_url)
         parent_folder_url = await get_parent_folder(rdm, rdm_url)
@@ -144,11 +146,16 @@ class GovernedRunner(Application):
         if get_target_provider(rdm, source_url) == 'rdm':
             try:
                 spawner.rdmfs_token = rdm.access_token
+                user_options.update({
+                    'rdm_node_id': rdm_node_id,
+                    'rdm_api_url': rdm.api_url,
+                })
+                spawner.user_options = user_options
             except AttributeError:
                 self.log.warning('Spawner is not supported for RDMFS')
-        host, port = await spawner.start()
-        self.log.info(f'Started container: {host}:{port}')
-        process = await tracker.track_process(spawner, host, port)
+        spawner_resonse = await spawner.start()
+        self.log.info(f'Started container: {spawner_resonse}')
+        process = await tracker.track_process(spawner, spawner_resonse)
         self.log.debug(f'Waiting for process to finish...')
         log_stream_callback_impl('running', f'Waiting for {notebook_filename} to finish...\n')
         exit_code = await process.wait(log_stream_callback_impl)

@@ -12,5 +12,5 @@ toml
 jupyterhub
 aiodocker
 dockerspawner
-kubernetes
+jupyterhub-kubespawner
 binderhub @ git+https://github.com/RCOSDP/CS-binderhub.git#egg=binderhub

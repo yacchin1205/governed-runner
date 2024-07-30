@@ -1,3 +1,5 @@
+from typing import Any
+
 from collections.abc import Callable
 from aiodocker import Docker
 from jupyterhub.spawner import Spawner
@@ -26,7 +28,7 @@ class ContainerTracker(ProcessTracker):
             return container._container['State']['ExitCode']
 
 class DockerTracker(JobTracker):
-    async def track_process(self, spawner: Spawner, hostname: str, port: int) -> ProcessTracker:
+    async def track_process(self, spawner: Spawner, _: Any) -> ProcessTracker:
         async with Docker() as docker:
             containers = await docker.containers.list()
             containers = [c for c in containers if has_name(c, spawner.container_name)]

@@ -10,6 +10,10 @@ class ContextBase:
 
 class User(ContextBase):
     @property
+    def id(self):
+        return self.job.owner.id
+
+    @property
     def name(self):
         return self.job.owner.name
 
@@ -37,7 +41,9 @@ class ORMSpawner(ContextBase):
     def name(self):
         return self.job.id
 
-def configure_spawner(job: Job, spawner: Spawner):
-    spawner.user = User(job)
-    spawner.hub = Hub(job)
-    spawner.orm_spawner = ORMSpawner(job)
+def get_spawner_kwargs(job: Job):
+    return dict(
+        user = User(job),
+        hub = Hub(job),
+        orm_spawner = ORMSpawner(job),
+    )
