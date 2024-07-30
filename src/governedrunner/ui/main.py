@@ -15,7 +15,7 @@ from governedrunner.db.models import User
 from . import auth
 from .util import frontend_url_for
 from .routes import routes
-from .rdm import update_rdm_token
+from .rdm import update_rdm_token, check_rdm_token
 
 FORCE_BUILD_FRONTEND = config('FORCE_BUILD_FRONTEND', cast=bool, default=False)
 
@@ -56,6 +56,8 @@ async def homepage(request):
         if updated:
             return RedirectResponse(url=frontend_url_for(request, 'homepage'))
         if user.rdm_token is None:
+            return RedirectResponse(url=frontend_url_for(request, 'rdm_authorize'))
+        if not (await check_rdm_token(user.rdm_token, db)):
             return RedirectResponse(url=frontend_url_for(request, 'rdm_authorize'))
         return FileResponse(
             path=f'{build_path}/index.html',

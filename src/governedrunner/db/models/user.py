@@ -23,6 +23,7 @@ class RDMToken(Base):
     id = Column(Integer, primary_key=True, index=True)
     service_id = Column(String, index=True)
     token = Column(String, index=True)
+    refresh_token = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), index=True)
     expired_at = Column(DateTime(timezone=True), nullable=True, index=True)
     owner_id = Column(Integer, ForeignKey('users.id'))
